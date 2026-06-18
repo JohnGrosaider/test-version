@@ -1,0 +1,2419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Growth Partner Edit Tool — AI Video Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800;900&family=Satoshi:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #080810;
+    --white: #f0eeff;
+    --purple: #9b30ff;
+    --purple-mid: #7b2fe0;
+    --purple-dark: #4a0fa3;
+    --purple-wrap: #c040ff;
+    --purple-glow: rgba(155,48,255,0.35);
+    --purple-subtle: rgba(155,48,255,0.08);
+    --gray-400: #8b82a8;
+    --gray-600: #4a4460;
+    --glass-bg: rgba(255,255,255,0.04);
+    --glass-border: rgba(255,255,255,0.09);
+  }
+
+  .content-type-card:hover {
+    border-color: rgba(155,48,255,0.4) !important;
+    background: rgba(155,48,255,0.06) !important;
+    transform: translateY(-2px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Satoshi', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .logo-text, .plan-name-text, .btn-hero, .btn-primary {
+    font-family: 'Cabinet Grotesk', sans-serif;
+  }
+
+  /* ── BACKGROUND ── */
+  .bg-orbs {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  }
+  .orb {
+    position: absolute; border-radius: 50%;
+    filter: blur(80px); opacity: 0.25;
+    animation: orbFloat 12s ease-in-out infinite;
+  }
+  .orb-1 {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, #9b30ff, #4a0fa3);
+    top: -200px; left: -100px;
+    animation-delay: 0s;
+  }
+  .orb-2 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, #c040ff, #7b2fe0);
+    top: 30%; right: -150px;
+    animation-delay: -4s;
+  }
+  .orb-3 {
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, #6020c0, #9b30ff);
+    bottom: 10%; left: 20%;
+    animation-delay: -8s;
+  }
+  @keyframes orbFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-40px) scale(1.05); }
+  }
+
+  /* Noise grain */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 48px; height: 64px;
+    background: rgba(8,8,16,0.7);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(155,48,255,0.12);
+  }
+
+  .logo-text {
+    font-size: 15px; font-weight: 800; letter-spacing: -0.3px;
+    color: var(--white);
+  }
+  .logo-text em { color: var(--purple-wrap); font-style: normal; }
+
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+
+  .trial-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(155,48,255,0.12);
+    border: 1px solid rgba(155,48,255,0.3);
+    border-radius: 99px; padding: 4px 14px;
+    font-size: 12px; font-weight: 500; color: #c984ff;
+  }
+  .trial-pill .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--purple-wrap);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .btn-ghost {
+    padding: 7px 16px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: transparent; color: var(--gray-400);
+    font-size: 13px; font-family: 'Satoshi', sans-serif;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-ghost:hover { border-color: rgba(155,48,255,0.4); color: var(--white); }
+
+  .btn-primary {
+    padding: 8px 20px; border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, var(--purple), var(--purple-wrap));
+    color: #fff; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(155,48,255,0.4);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 32px rgba(155,48,255,0.6); }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative; z-index: 2;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 120px 40px 80px;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(155,48,255,0.1);
+    border: 1px solid rgba(155,48,255,0.25);
+    border-radius: 99px; padding: 6px 18px;
+    font-size: 13px; color: #c984ff;
+    margin-bottom: 36px;
+    animation: fadeUp 0.7s ease both;
+  }
+
+  .hero h1 {
+    font-size: clamp(44px, 8vw, 90px);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -3px;
+    margin-bottom: 28px;
+    animation: fadeUp 0.7s 0.1s ease both;
+  }
+
+  .hero h1 .grad {
+    background: linear-gradient(135deg, #fff 0%, var(--purple-wrap) 50%, var(--purple) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero h1 .dim { color: var(--gray-600); }
+
+  .hero-sub {
+    font-size: 18px; font-weight: 300;
+    color: var(--gray-400); max-width: 500px;
+    margin-bottom: 44px;
+    animation: fadeUp 0.7s 0.2s ease both;
+  }
+
+  .hero-cta {
+    display: flex; align-items: center; gap: 16px;
+    animation: fadeUp 0.7s 0.3s ease both;
+  }
+
+  .btn-hero {
+    padding: 15px 36px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, var(--purple-mid), var(--purple-wrap));
+    color: #fff; font-size: 16px; font-weight: 800;
+    cursor: pointer; transition: all 0.25s;
+    box-shadow: 0 0 40px rgba(155,48,255,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+    position: relative; overflow: hidden;
+  }
+  .btn-hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .btn-hero:hover { transform: translateY(-3px); box-shadow: 0 0 60px rgba(192,64,255,0.7), inset 0 1px 0 rgba(255,255,255,0.15); }
+  .btn-hero:hover::before { opacity: 1; }
+
+  .hero-note { font-size: 13px; color: var(--gray-600); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── TYPING DEMO ── */
+  .demo-section {
+    position: relative; z-index: 2;
+    padding: 40px 40px 100px;
+    max-width: 900px; margin: 0 auto;
+  }
+
+  .demo-label {
+    text-align: center; font-size: 13px;
+    text-transform: uppercase; letter-spacing: 2px;
+    color: var(--gray-600); margin-bottom: 32px;
+    font-weight: 500;
+  }
+
+  .demo-window {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(155,48,255,0.2);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 0 80px rgba(155,48,255,0.1), 0 40px 80px rgba(0,0,0,0.4);
+  }
+
+  .demo-topbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 20px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .demo-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .demo-dot:nth-child(1) { background: #ff5f57; }
+  .demo-dot:nth-child(2) { background: #febc2e; }
+  .demo-dot:nth-child(3) { background: #28c840; }
+  .demo-title { font-size: 13px; color: var(--gray-600); margin-left: 8px; }
+
+  .demo-body { padding: 28px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* Upload zone in demo */
+  .demo-upload {
+    border: 1.5px dashed rgba(155,48,255,0.25);
+    border-radius: 12px; padding: 24px;
+    text-align: center;
+    background: rgba(155,48,255,0.04);
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+  }
+  .demo-upload-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: rgba(155,48,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .demo-upload p { font-size: 13px; color: var(--gray-400); text-align: left; }
+  .demo-upload strong { color: #c984ff; }
+  .demo-file-name { font-size: 12px; color: var(--gray-600); margin-top: 2px; }
+
+  /* Prompt box in demo */
+  .demo-prompt-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--gray-600); margin-bottom: 8px; font-weight: 500;
+  }
+  .demo-prompt-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(155,48,255,0.2);
+    border-radius: 10px; padding: 14px 16px;
+    font-size: 14px; color: var(--white);
+    font-family: 'Satoshi', sans-serif;
+    min-height: 80px; position: relative;
+    transition: border-color 0.3s;
+  }
+  .demo-prompt-box.active { border-color: rgba(155,48,255,0.5); }
+
+  .typing-text { color: var(--white); }
+  .cursor {
+    display: inline-block; width: 2px; height: 16px;
+    background: var(--purple-wrap); margin-left: 1px;
+    vertical-align: middle;
+    animation: blink 0.8s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* Processing steps in demo */
+  .demo-processing {
+    display: none;
+    background: rgba(155,48,255,0.06);
+    border: 1px solid rgba(155,48,255,0.15);
+    border-radius: 10px; padding: 16px;
+  }
+  .demo-processing.show { display: block; }
+  .demo-step {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--gray-600);
+    padding: 6px 0;
+    transition: color 0.3s;
+  }
+  .demo-step.active { color: var(--white); }
+  .demo-step.done { color: #a78bfa; }
+  .demo-step-icon { width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .demo-step-spinner {
+    width: 14px; height: 14px;
+    border: 1.5px solid rgba(155,48,255,0.3);
+    border-top-color: var(--purple-wrap);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+  }
+  .demo-step.active .demo-step-spinner { display: block; }
+  .demo-step.done .demo-step-spinner { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Result in demo */
+  .demo-result {
+    display: none;
+    background: rgba(120,60,255,0.08);
+    border: 1px solid rgba(155,48,255,0.25);
+    border-radius: 10px; padding: 16px;
+    align-items: center; gap: 14px;
+  }
+  .demo-result.show { display: flex; }
+  .demo-result-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: rgba(155,48,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .demo-result-name { font-size: 14px; font-weight: 500; }
+  .demo-result-meta { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+  .demo-result-btn {
+    margin-left: auto; padding: 6px 14px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--purple-mid), var(--purple-wrap));
+    border: none; color: #fff; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: 'Cabinet Grotesk', sans-serif;
+  }
+
+  .demo-submit-row { display: flex; justify-content: flex-end; }
+  .demo-submit {
+    padding: 10px 24px; border-radius: 8px; border: none;
+    background: linear-gradient(135deg, var(--purple-mid), var(--purple-wrap));
+    color: #fff; font-size: 13px; font-weight: 700;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    cursor: pointer; opacity: 0.5;
+    box-shadow: 0 0 20px rgba(155,48,255,0.3);
+    transition: opacity 0.3s;
+  }
+  .demo-submit.ready { opacity: 1; }
+
+  /* ── FEATURES ── */
+  .features {
+    position: relative; z-index: 2;
+    max-width: 1100px; margin: 0 auto;
+    padding: 40px 40px 100px;
+  }
+
+  .section-label {
+    text-align: center; font-size: 13px;
+    text-transform: uppercase; letter-spacing: 2px;
+    color: var(--gray-600); margin-bottom: 16px; font-weight: 500;
+  }
+  .section-title {
+    text-align: center; font-size: 36px; font-weight: 800;
+    letter-spacing: -1px; margin-bottom: 48px;
+    font-family: 'Cabinet Grotesk', sans-serif;
+  }
+
+  .features-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+  }
+
+  .feature-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px; padding: 28px 24px;
+    transition: all 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(155,48,255,0.4), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .feature-card:hover { border-color: rgba(155,48,255,0.25); transform: translateY(-4px); }
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-icon {
+    width: 46px; height: 46px; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px; font-size: 22px;
+    background: rgba(155,48,255,0.1);
+    border: 1px solid rgba(155,48,255,0.15);
+  }
+  .feature-card h3 {
+    font-size: 16px; font-weight: 700; margin-bottom: 8px;
+    font-family: 'Cabinet Grotesk', sans-serif;
+  }
+  .feature-card p { font-size: 14px; color: var(--gray-400); line-height: 1.6; }
+
+  /* ── PRICING ── */
+  .pricing {
+    position: relative; z-index: 2;
+    max-width: 960px; margin: 0 auto;
+    padding: 40px 40px 120px;
+  }
+
+  .pricing-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    margin-top: 48px;
+  }
+
+  /* GLASSMORPHISM PLAN CARDS */
+  .plan-card {
+    position: relative;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px; padding: 32px 24px;
+    transition: transform 0.3s;
+    overflow: hidden;
+  }
+
+  /* Inner glow */
+  .plan-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at top left, rgba(155,48,255,0.08), transparent 60%);
+    pointer-events: none;
+  }
+
+  /* Top border glow */
+  .plan-card::after {
+    content: '';
+    position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(155,48,255,0.3), transparent);
+  }
+
+  .plan-card:hover { transform: translateY(-6px); }
+
+  .plan-card.featured {
+    background: rgba(155,48,255,0.1);
+    border: 1px solid rgba(155,48,255,0.3);
+    box-shadow: 0 0 60px rgba(155,48,255,0.15), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  .plan-card.featured::before {
+    background: radial-gradient(ellipse at top, rgba(155,48,255,0.15), transparent 60%);
+  }
+  .plan-card.featured::after {
+    background: linear-gradient(90deg, transparent, rgba(192,64,255,0.6), transparent);
+  }
+
+  .plan-badge {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--purple-mid), var(--purple-wrap));
+    color: #fff; font-size: 11px; font-weight: 700;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    padding: 3px 14px; border-radius: 99px;
+    white-space: nowrap;
+    box-shadow: 0 0 20px rgba(155,48,255,0.5);
+  }
+
+  .plan-name-text {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--gray-400); margin-bottom: 14px;
+  }
+
+  .plan-price-big {
+    font-size: 48px; font-weight: 900;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    letter-spacing: -2px; line-height: 1;
+    background: linear-gradient(135deg, #fff, #c984ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .plan-price-big sup { font-size: 20px; vertical-align: top; margin-top: 10px; font-weight: 700; }
+  .plan-price-big sub { font-size: 14px; font-weight: 400; -webkit-text-fill-color: var(--gray-400); }
+
+  .plan-desc { font-size: 13px; color: var(--gray-400); margin: 12px 0 20px; line-height: 1.5; }
+
+  .plan-features { list-style: none; margin-bottom: 28px; }
+  .plan-features li {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: rgba(240,238,255,0.8);
+  }
+  .plan-features li:last-child { border-bottom: none; }
+  .check {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(155,48,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 10px; color: #c984ff;
+  }
+
+  .plan-desktop-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; padding: 3px 10px; border-radius: 99px;
+    background: rgba(155,48,255,0.12);
+    color: #c984ff;
+    border: 1px solid rgba(155,48,255,0.2);
+    margin-bottom: 16px;
+  }
+
+  .btn-plan {
+    width: 100%; padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+    color: var(--white); font-size: 13px; font-weight: 700;
+    font-family: 'Cabinet Grotesk', sans-serif;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-plan:hover { background: rgba(255,255,255,0.09); border-color: rgba(155,48,255,0.3); }
+
+  .btn-plan.purple {
+    background: linear-gradient(135deg, var(--purple-mid), var(--purple-wrap));
+    border-color: transparent;
+    box-shadow: 0 0 30px rgba(155,48,255,0.4);
+  }
+  .btn-plan.purple:hover { box-shadow: 0 0 50px rgba(155,48,255,0.6); transform: translateY(-1px); }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative; z-index: 2;
+    border-top: 1px solid rgba(155,48,255,0.1);
+    padding: 24px 48px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; color: var(--gray-600);
+    flex-wrap: wrap; gap: 12px;
+  }
+
+  /* ── MOBILE ── */
+  @media (max-width: 680px) {
+    nav { padding: 0 16px; }
+    .hero { padding: 100px 20px 60px; }
+    .hero h1 { font-size: 40px; letter-spacing: -1.5px; }
+    .features-grid { grid-template-columns: 1fr; }
+    .pricing-grid {
+      display: flex; overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      gap: 14px; padding-bottom: 16px;
+      scrollbar-width: none;
+    }
+    .pricing-grid::-webkit-scrollbar { display: none; }
+    .plan-card { flex: 0 0 78vw; max-width: 300px; scroll-snap-align: center; }
+    .demo-section, .features, .pricing { padding-left: 16px; padding-right: 16px; }
+    footer { padding: 20px 16px; flex-direction: column; text-align: center; }
+  }
+
+  /* ── LEGAL MODALS ── */
+  .legal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(12px);
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .legal-overlay.show { display: flex; }
+  .legal-modal {
+    background: #0e0e1a;
+    border: 1px solid rgba(155,48,255,0.2);
+    border-radius: 20px;
+    width: 100%; max-width: 640px;
+    max-height: 80vh;
+    display: flex; flex-direction: column;
+    animation: modalIn 0.25s ease;
+    box-shadow: 0 0 80px rgba(155,48,255,0.15);
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .legal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px;
+    border-bottom: 1px solid rgba(155,48,255,0.1);
+    flex-shrink: 0;
+  }
+  .legal-header h2 { font-size: 18px; font-weight: 800; font-family: "Cabinet Grotesk", sans-serif; }
+  .legal-close {
+    background: none; border: none; color: var(--gray-600);
+    cursor: pointer; padding: 4px; border-radius: 6px; transition: color 0.2s;
+  }
+  .legal-close:hover { color: var(--white); }
+  .legal-body {
+    padding: 24px 28px;
+    overflow-y: auto;
+    font-size: 14px; color: var(--gray-400); line-height: 1.8;
+  }
+  .legal-body h3 {
+    font-size: 15px; font-weight: 700; color: var(--white);
+    font-family: "Cabinet Grotesk", sans-serif;
+    margin: 20px 0 8px;
+  }
+  .legal-body h3:first-child { margin-top: 0; }
+  .legal-body p { margin-bottom: 12px; }
+  .legal-body a { color: #c984ff; }
+
+  /* Processing steps */
+  .proc-step {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--gray-600);
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: color 0.3s;
+  }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-step.active { color: var(--white); }
+  .proc-step.done { color: #a78bfa; }
+  .proc-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.1); flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .proc-step.active .proc-dot { background: #c040ff; animation: pulse 1s infinite; }
+  .proc-step.done .proc-dot { background: #a78bfa; }
+
+  @keyframes slideUpWidget {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo-text">Growth Partner <em>Edit Tool</em></div>
+  <div class="nav-right">
+    <div class="trial-pill"><div class="dot"></div>7 days · 5h free trial</div>
+    <button class="btn-ghost" onclick="showAuth('login')">Sign in</button>
+    <button class="btn-primary" id="navCta" onclick="showAuth('register')">Start for free →</button>
+  </div>
+</nav>
+
+<div id="landingContent"><!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    AI video editor for streamers & content creators
+  </div>
+  <h1>
+    <span class="grad">Upload. Type.<br>Done.</span><br>
+    <span class="dim">That simple.</span>
+  </h1>
+  <p class="hero-sub">No timeline. No editing software. Just tell AI what to do — captions, clips, effects, music.</p>
+  <div class="hero-cta">
+    <button class="btn-hero" onclick="showAuth('register')">Try for free →</button>
+    <span class="hero-note">7 days · 5h free · no credit card</span>
+  </div>
+</section>
+
+<!-- TYPING DEMO -->
+<section class="demo-section">
+  <div class="demo-label">See it in action</div>
+  <div class="demo-window">
+    <div class="demo-topbar">
+      <div class="demo-dot"></div>
+      <div class="demo-dot"></div>
+      <div class="demo-dot"></div>
+      <span class="demo-title">Growth Partner Edit Tool</span>
+    </div>
+    <div class="demo-body">
+
+      <!-- Upload -->
+      <div class="demo-upload">
+        <div class="demo-upload-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c984ff" stroke-width="1.8">
+            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+          </svg>
+        </div>
+        <div>
+          <p><strong>stream_2024_05h30m.mp4</strong></p>
+          <p class="demo-file-name">5.2 GB · uploaded ✓</p>
+        </div>
+      </div>
+
+      <!-- Prompt -->
+      <div>
+        <div class="demo-prompt-label">Instructions for AI</div>
+        <div class="demo-prompt-box" id="demoPromptBox">
+          <span class="typing-text" id="typingText"></span><span class="cursor" id="cursor"></span>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="demo-submit-row">
+        <button class="demo-submit" id="demoSubmit">Start editing →</button>
+      </div>
+
+      <!-- Processing -->
+      <div class="demo-processing" id="demoProcessing">
+        <div class="demo-step" id="ds1">
+          <div class="demo-step-icon"><div class="demo-step-spinner"></div><span class="demo-check" style="display:none">✓</span></div>
+          Transcribing audio to text...
+        </div>
+        <div class="demo-step" id="ds2">
+          <div class="demo-step-icon"><div class="demo-step-spinner"></div><span class="demo-check" style="display:none">✓</span></div>
+          Analyzing content with AI...
+        </div>
+        <div class="demo-step" id="ds3">
+          <div class="demo-step-icon"><div class="demo-step-spinner"></div><span class="demo-check" style="display:none">✓</span></div>
+          Cutting and editing clips...
+        </div>
+        <div class="demo-step" id="ds4">
+          <div class="demo-step-icon"><div class="demo-step-spinner"></div><span class="demo-check" style="display:none">✓</span></div>
+          Adding captions and effects...
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="demo-result" id="demoResult">
+        <div class="demo-result-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c984ff" stroke-width="1.8">
+            <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="demo-result-name" id="demoResultName">clip_01_instagram.mp4</div>
+          <div class="demo-result-meta">0:58 · 1080x1920 · 124 MB</div>
+        </div>
+        <button class="demo-result-btn">Download</button>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="section-label">What it does</div>
+  <div class="section-title">Everything. One instruction.</div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">✂️</div>
+      <h3>Automatic editing</h3>
+      <p>AI transcribes your video, analyzes the content and cuts exactly what you want. Even from a 5-hour stream.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💬</div>
+      <h3>Captions & transcript</h3>
+      <p>Auto captions in Reels/Shorts style. Accurate, synced, with font and color options.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎬</div>
+      <h3>Short clips</h3>
+      <p>AI turns long videos into the best moments ready for Instagram, TikTok or YouTube Shorts.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎵</div>
+      <h3>Music & effects</h3>
+      <p>Add background music, sound effects, scene transitions — all through one instruction.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>Unlimited (Gold)</h3>
+      <p>Desktop app processes video on your GPU. No upload, no limits, no waiting for a server.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🌍</div>
+      <h3>99 languages</h3>
+      <p>AI automatically detects and transcribes any language. Stream in Japanese? No problem.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing">
+  <div class="section-label">Pricing</div>
+  <div class="section-title">Simple, honest pricing</div>
+  <p style="text-align:center; color:var(--gray-400); font-size:15px; margin-top:-32px;">All plans start with a <strong style="color:#c984ff">7 days · 5h free trial</strong> (up to 5h of video) — no credit card</p>
+
+  <div class="pricing-grid">
+    <!-- BASIC -->
+    <div class="plan-card">
+      <div class="plan-name-text">Basic</div>
+      <div class="plan-price-big"><sup>$</sup>29<sub>/mo</sub></div>
+      <p class="plan-desc">For beginner content creators and YouTubers.</p>
+      <ul class="plan-features">
+        <li><div class="check">✓</div> 20 hours of video / month</li>
+        <li><div class="check">✓</div> Automatic captions</li>
+        <li><div class="check">✓</div> Short clips</li>
+        <li><div class="check">✓</div> Unlimited file size</li>
+        <li><div class="check">✓</div> HD export</li>
+      </ul>
+      <button class="btn-plan" onclick="showAuth('register')">Start for free</button>
+    </div>
+
+    <!-- PLUS -->
+    <div class="plan-card featured">
+      <div class="plan-badge">Most popular</div>
+      <div class="plan-name-text">Plus</div>
+      <div class="plan-price-big"><sup>$</sup>59<sub>/mo</sub></div>
+      <p class="plan-desc">For active creators with regular content.</p>
+      <ul class="plan-features">
+        <li><div class="check">✓</div> 60 hours of video / month</li>
+        <li><div class="check">✓</div> Everything in Basic</li>
+        <li><div class="check">✓</div> Music & sound effects</li>
+        <li><div class="check">✓</div> Priority processing</li>
+        <li><div class="check">✓</div> 4K export</li>
+      </ul>
+      <button class="btn-plan purple" onclick="showAuth('register')">Start for free</button>
+    </div>
+
+    <!-- GOLD -->
+    <div class="plan-card">
+      <div class="plan-name-text">Gold</div>
+      <div class="plan-price-big"><sup>$</sup>99<sub>/mo</sub></div>
+      <div class="plan-desktop-tag">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Desktop app · your GPU
+      </div>
+      <ul class="plan-features">
+        <li><div class="check">✓</div> <strong>Unlimited</strong> video hours</li>
+        <li><div class="check">✓</div> Everything in Plus</li>
+        <li><div class="check">✓</div> Processed on your PC/GPU</li>
+        <li><div class="check">✓</div> No upload = instant</li>
+        <li><div class="check">✓</div> Perfect for streamers</li>
+      </ul>
+      <button class="btn-plan" onclick="showAuth('register')">Start for free</button>
+    </div>
+  </div>
+  <p style="text-align:center; font-size:12px; color:var(--gray-600); margin-top:16px;">← Swipe to see all plans →</p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span>© 2026 Growth Partner Edit Tool</span>
+  <span style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; justify-content:center;">
+    <span><a href="#" onclick="openModal('terms')" style="color:var(--gray-600); text-decoration:none; transition:color 0.2s;" onmouseover="this.style.color='#c984ff'" onmouseout="this.style.color='var(--gray-600)'">Terms</a> · <a href="#" onclick="openModal('privacy')" style="color:var(--gray-600); text-decoration:none; transition:color 0.2s;" onmouseover="this.style.color='#c984ff'" onmouseout="this.style.color='var(--gray-600)'">Privacy</a></span>
+    <span style="display:flex; align-items:center; gap:6px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <polyline points="22,6 12,13 2,6"/>
+      </svg>
+      Support: <a href="mailto:your@growth-partner.agency" style="color:#c984ff; text-decoration:none;">your@growth-partner.agency</a>
+    </span>
+  </span>
+</footer>
+</div><!-- end landingContent -->
+
+<script>
+  // ── TYPING DEMO ANIMATION ──
+  const phrases = [
+    "Create 3 short Instagram clips from the best moments",
+    "Add captions and cut out all silence",
+    "Make a highlight reel with background music",
+    "Edit to YouTube Shorts format (60s)",
+  ];
+
+  let phraseIdx = 0;
+  let charIdx = 0;
+  let deleting = false;
+  let demoStarted = false;
+  let demoPhrase = "";
+
+  const typingEl = document.getElementById('typingText');
+  const submitBtn = document.getElementById('demoSubmit');
+  const promptBox = document.getElementById('demoPromptBox');
+
+  function typeLoop() {
+    const current = phrases[phraseIdx];
+
+    if (!deleting) {
+      charIdx++;
+      typingEl.textContent = current.slice(0, charIdx);
+      if (charIdx === current.length) {
+        if (!demoStarted && phraseIdx === 0) {
+          // Trigger demo after first phrase is typed
+          setTimeout(() => {
+            submitBtn.classList.add('ready');
+            setTimeout(triggerDemo, 800);
+          }, 600);
+          return;
+        }
+        setTimeout(() => { deleting = true; typeLoop(); }, 1800);
+        return;
+      }
+    } else {
+      charIdx--;
+      typingEl.textContent = current.slice(0, charIdx);
+      if (charIdx === 0) {
+        deleting = false;
+        phraseIdx = (phraseIdx + 1) % phrases.length;
+        setTimeout(typeLoop, 300);
+        return;
+      }
+    }
+    setTimeout(typeLoop, deleting ? 25 : 55);
+  }
+
+  function triggerDemo() {
+    demoStarted = true;
+    submitBtn.textContent = 'Processing...';
+    promptBox.classList.add('active');
+
+    const processing = document.getElementById('demoProcessing');
+    processing.classList.add('show');
+
+    const steps = ['ds1','ds2','ds3','ds4'];
+    const delays = [0, 2200, 4500, 6500];
+
+    steps.forEach((id, idx) => {
+      setTimeout(() => {
+        if (idx > 0) {
+          const prev = document.getElementById(steps[idx-1]);
+          prev.classList.remove('active');
+          prev.classList.add('done');
+        }
+        const el = document.getElementById(id);
+        el.classList.add('active');
+
+        if (idx === steps.length - 1) {
+          setTimeout(() => {
+            el.classList.remove('active');
+            el.classList.add('done');
+            processing.classList.remove('show');
+            document.getElementById('demoResult').classList.add('show');
+            submitBtn.textContent = 'Done ✓';
+
+            // Reset after 3s and continue typing other phrases
+            setTimeout(() => {
+              document.getElementById('demoResult').classList.remove('show');
+              submitBtn.classList.remove('ready');
+              submitBtn.textContent = 'Start editing →';
+              promptBox.classList.remove('active');
+              steps.forEach(s => {
+                document.getElementById(s).classList.remove('active','done');
+              });
+              deleting = true;
+              demoStarted = false;
+              phraseIdx = 1;
+              typeLoop();
+            }, 2500);
+          }, 1800);
+        }
+      }, delays[idx]);
+    });
+  }
+
+  // Start typing after short delay
+  setTimeout(typeLoop, 800);
+</script>
+
+<!-- LEGAL MODALS -->
+<div class="legal-overlay" id="termsModal">
+  <div class="legal-modal">
+    <div class="legal-header">
+      <h2>Terms of Service</h2>
+      <button class="legal-close" onclick="closeModal('terms')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="legal-body">
+      <h3>1. Acceptance of Terms</h3>
+      <p>By accessing or using Growth Partner Edit Tool ("the Service"), you agree to be bound by these Terms of Service. If you do not agree, please do not use the Service.</p>
+
+      <h3>2. Free Trial</h3>
+      <p>New users receive a 7-day free trial limited to 5 hours of video processing. No credit card is required. After the trial period, continued use requires a paid subscription.</p>
+
+      <h3>3. Subscriptions</h3>
+      <p>Subscriptions are billed monthly and renew automatically. You may cancel at any time. No refunds are issued for partial billing periods. Prices are in USD and may change with 30 days notice.</p>
+
+      <h3>4. Acceptable Use</h3>
+      <p>You agree not to use the Service to process content that is illegal, violates third-party rights, or contains harmful material. You are solely responsible for the content you upload and process.</p>
+
+      <h3>5. Intellectual Property</h3>
+      <p>You retain all rights to your uploaded content. By using the Service, you grant us a limited license to process your content solely for the purpose of providing the Service.</p>
+
+      <h3>6. Privacy</h3>
+      <p>Your use of the Service is also governed by our Privacy Policy. Processed videos are stored temporarily and deleted after download. We do not sell your data to third parties.</p>
+
+      <h3>7. Limitation of Liability</h3>
+      <p>The Service is provided "as is" without warranties of any kind. We are not liable for any indirect, incidental, or consequential damages arising from your use of the Service.</p>
+
+      <h3>8. Termination</h3>
+      <p>We reserve the right to suspend or terminate accounts that violate these Terms. You may cancel your account at any time from your account settings.</p>
+
+      <h3>9. Changes to Terms</h3>
+      <p>We may update these Terms at any time. Continued use of the Service after changes constitutes acceptance of the new Terms.</p>
+
+      <h3>10. Contact</h3>
+      <p>For questions about these Terms, contact us at <a href="mailto:your@growth-partner.agency">your@growth-partner.agency</a>.</p>
+    </div>
+  </div>
+</div>
+
+<div class="legal-overlay" id="privacyModal">
+  <div class="legal-modal">
+    <div class="legal-header">
+      <h2>Privacy Policy</h2>
+      <button class="legal-close" onclick="closeModal('privacy')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="legal-body">
+      <h3>1. Information We Collect</h3>
+      <p>We collect information you provide directly: name, email address, and payment information. We also collect usage data such as videos processed, features used, and session duration.</p>
+
+      <h3>2. How We Use Your Information</h3>
+      <p>We use your information to provide and improve the Service, process payments, send transactional emails (receipts, trial reminders), and respond to support requests. We do not use your data for advertising.</p>
+
+      <h3>3. Video Content</h3>
+      <p>Videos you upload are processed solely to provide the editing service. Uploaded files are stored temporarily during processing and permanently deleted within 24 hours of job completion. We do not view, analyze, or retain your video content beyond what is necessary to provide the Service.</p>
+
+      <h3>4. Data Sharing</h3>
+      <p>We do not sell your personal data. We share data only with service providers necessary to operate the Service, including database providers, payment processors, and server infrastructure providers. These providers are bound by confidentiality agreements.</p>
+
+      <h3>5. Cookies</h3>
+      <p>We use essential cookies to maintain your login session. We do not use tracking or advertising cookies.</p>
+
+      <h3>6. Data Security</h3>
+      <p>We use industry-standard security measures including encrypted connections (HTTPS), secure authentication, and encrypted data storage. No method of transmission over the internet is 100% secure.</p>
+
+      <h3>7. Your Rights</h3>
+      <p>You have the right to access, correct, or delete your personal data at any time. To exercise these rights, contact us at <a href="mailto:your@growth-partner.agency">your@growth-partner.agency</a>. We will respond within 30 days.</p>
+
+      <h3>8. Data Retention</h3>
+      <p>Account data is retained as long as your account is active. Upon account deletion, your personal data is permanently removed within 30 days.</p>
+
+      <h3>9. Children</h3>
+      <p>The Service is not directed at children under 16. We do not knowingly collect data from children.</p>
+
+      <h3>10. Changes</h3>
+      <p>We may update this Privacy Policy. We will notify you of significant changes by email. Last updated: April 2026.</p>
+
+      <h3>11. Contact</h3>
+      <p>For privacy questions, contact us at <a href="mailto:your@growth-partner.agency">your@growth-partner.agency</a>.</p>
+    </div>
+  </div>
+</div>
+<script>
+  function openModal(type) {
+    document.getElementById(type + 'Modal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(type) {
+    document.getElementById(type + 'Modal').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+  document.getElementById('termsModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal('terms');
+  });
+  document.getElementById('privacyModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal('privacy');
+  });
+</script>
+<!-- ══════════════════════════════════════ -->
+<!-- APP SECTION -->
+<!-- ══════════════════════════════════════ -->
+<div id="appSection" style="display:none; padding-top:64px; min-height:100vh; position:relative; z-index:2;">
+
+  <div style="max-width:720px; margin:0 auto; padding:48px 24px 80px;">
+
+    <div style="text-align:center; margin-bottom:36px;">
+      <h2 style="font-family:'Cabinet Grotesk',sans-serif; font-size:28px; font-weight:800; margin-bottom:8px;">What do you want to edit today?</h2>
+      <p style="color:var(--gray-400); font-size:15px;" id="appSubtitle">Choose the type of content — AI will adapt to it</p>
+    </div>
+
+    <!-- CONTENT TYPE SELECTOR -->
+    <div id="contentTypeSelector" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:28px;">
+      <div class="content-type-card" id="ct_short_clip" onclick="selectContentType('short_clip')" style="border:1.5px solid rgba(255,255,255,0.1); border-radius:14px; padding:18px 14px; text-align:center; cursor:pointer; transition:all 0.2s; background:rgba(255,255,255,0.02);">
+        <div style="font-size:28px; margin-bottom:8px;">✂️</div>
+        <div style="font-family:'Cabinet Grotesk',sans-serif; font-size:14px; font-weight:700; margin-bottom:4px;">Short Clip</div>
+        <div style="font-size:11px; color:var(--gray-400); line-height:1.4;">Under 10 min<br>Effects, format, music</div>
+      </div>
+      <div class="content-type-card" id="ct_video" onclick="selectContentType('video')" style="border:1.5px solid rgba(155,48,255,0.5); border-radius:14px; padding:18px 14px; text-align:center; cursor:pointer; transition:all 0.2s; background:rgba(155,48,255,0.08);">
+        <div style="font-size:28px; margin-bottom:8px;">🎬</div>
+        <div style="font-family:'Cabinet Grotesk',sans-serif; font-size:14px; font-weight:700; margin-bottom:4px;">Video</div>
+        <div style="font-size:11px; color:var(--gray-400); line-height:1.4;">10 min – a few hours<br>Best moments, splits</div>
+      </div>
+      <div class="content-type-card" id="ct_stream" onclick="selectContentType('stream')" style="border:1.5px solid rgba(255,255,255,0.1); border-radius:14px; padding:18px 14px; text-align:center; cursor:pointer; transition:all 0.2s; background:rgba(255,255,255,0.02);">
+        <div style="font-size:28px; margin-bottom:8px;">🎮</div>
+        <div style="font-family:'Cabinet Grotesk',sans-serif; font-size:14px; font-weight:700; margin-bottom:4px;">Stream</div>
+        <div style="font-size:11px; color:var(--gray-400); line-height:1.4;">Long VOD / stream<br>Highlights, clips</div>
+      </div>
+    </div>
+
+    <!-- TRIAL USAGE BAR -->
+    <div id="trialBar" style="display:none; background:rgba(155,48,255,0.08); border:1px solid rgba(155,48,255,0.2); border-radius:12px; padding:14px 18px; margin-bottom:24px;">
+      <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:8px;">
+        <span style="color:#c984ff; font-weight:500;">Trial usage</span>
+        <span id="trialUsageText" style="color:var(--gray-400);">0 / 5h used</span>
+      </div>
+      <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:99px; overflow:hidden;">
+        <div id="trialUsageFill" style="height:100%; background:linear-gradient(90deg,#7b2fe0,#c040ff); border-radius:99px; width:0%; transition:width 0.5s;"></div>
+      </div>
+    </div>
+
+    <!-- UPLOAD ZONE -->
+    <div id="uploadZone" style="border:1.5px dashed rgba(155,48,255,0.25); border-radius:16px; padding:48px 32px; text-align:center; background:rgba(155,48,255,0.03); cursor:pointer; transition:all 0.2s; margin-bottom:20px;" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault(); this.style.borderColor='rgba(155,48,255,0.6)'" ondragleave="this.style.borderColor='rgba(155,48,255,0.25)'" ondrop="handleDrop(event)">
+      <div style="width:52px; height:52px; border-radius:14px; background:rgba(155,48,255,0.1); border:1px solid rgba(155,48,255,0.2); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c984ff" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <h3 style="font-family:'Cabinet Grotesk',sans-serif; font-size:16px; font-weight:700; margin-bottom:6px;">Drag your video here or click to select</h3>
+      <p style="font-size:13px; color:var(--gray-400);">No file size limit — chunked upload</p>
+      <div style="display:flex; gap:6px; justify-content:center; margin-top:12px;">
+        <span style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(255,255,255,0.06); color:var(--gray-400);">MP4</span>
+        <span style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(255,255,255,0.06); color:var(--gray-400);">MOV</span>
+        <span style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(255,255,255,0.06); color:var(--gray-400);">AVI</span>
+        <span style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(255,255,255,0.06); color:var(--gray-400);">MKV</span>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept="video/*" style="display:none">
+
+    <!-- VOD LINK ZONE (stream only) -->
+    <div id="vodZone" style="display:none; margin-bottom:20px;">
+      <div style="border:1.5px dashed rgba(155,48,255,0.25); border-radius:16px; padding:32px; text-align:center; background:rgba(155,48,255,0.03);">
+        <div style="width:52px; height:52px; border-radius:14px; background:rgba(155,48,255,0.1); border:1px solid rgba(155,48,255,0.2); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c984ff" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <h3 style="font-family:'Cabinet Grotesk',sans-serif; font-size:16px; font-weight:700; margin-bottom:6px;">Paste your VOD link</h3>
+        <p style="font-size:13px; color:var(--gray-400); margin-bottom:16px;">Twitch, Kick or YouTube VOD URL</p>
+        <input id="vodUrlInput" type="url" placeholder="https://www.twitch.tv/videos/... or youtube.com/watch?v=..." style="width:100%; max-width:480px; padding:10px 14px; border-radius:10px; border:1px solid rgba(155,48,255,0.3); background:rgba(255,255,255,0.04); color:#fff; font-size:13px; font-family:'Satoshi',sans-serif; outline:none; box-sizing:border-box;" oninput="handleVodInput(this.value)">
+        <div id="vodPlatformBadge" style="margin-top:10px; font-size:12px; color:var(--gray-400);"></div>
+      </div>
+    </div>
+
+    <!-- FILE SELECTED -->
+    <div id="fileSelected" style="display:none; align-items:center; gap:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 18px; margin-bottom:20px;">
+      <div style="width:40px; height:40px; border-radius:10px; background:rgba(155,48,255,0.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c984ff" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div id="fileName" style="font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+        <div id="fileSize" style="font-size:12px; color:var(--gray-400); margin-top:2px;"></div>
+      </div>
+      <button onclick="resetFile()" style="background:none; border:none; color:var(--gray-600); cursor:pointer; padding:4px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- UPLOAD PROGRESS -->
+    <div id="uploadProgress" style="display:none; margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--gray-400); margin-bottom:8px;">
+        <span id="progressText">Uploading...</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:99px; overflow:hidden;">
+        <div id="progressFill" style="height:100%; background:linear-gradient(90deg,#7b2fe0,#c040ff); border-radius:99px; width:0%; transition:width 0.3s;"></div>
+      </div>
+    </div>
+
+    <!-- PROMPT -->
+    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:16px; padding:20px; margin-bottom:16px;">
+      <div style="font-size:12px; font-weight:500; text-transform:uppercase; letter-spacing:0.8px; color:var(--gray-400); margin-bottom:12px;">Instructions for AI</div>
+      <textarea id="promptInput" style="width:100%; min-height:110px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px 16px; color:var(--white); font-size:14px; font-family:'Satoshi',sans-serif; line-height:1.6; resize:vertical; outline:none; transition:border-color 0.2s;" placeholder="Tell AI what to do with your video..." onfocus="this.style.borderColor='rgba(155,48,255,0.4)'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'"></textarea>
+      <!-- QUICK PROMPTS — dynamic per content type -->
+      <div id="quickPrompts" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
+    </div>
+
+    <!-- MUSIC UPLOAD -->
+    <div id="musicSection" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:16px; padding:20px; margin-bottom:16px;">
+      <div style="font-size:12px; font-weight:500; text-transform:uppercase; letter-spacing:0.8px; color:var(--gray-400); margin-bottom:12px;">🎵 Background Music (optional)</div>
+
+      <div id="musicUploadZone" onclick="document.getElementById('musicInput').click()" style="border:1.5px dashed rgba(155,48,255,0.2); border-radius:10px; padding:16px; text-align:center; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(155,48,255,0.4)'" onmouseout="this.style.borderColor='rgba(155,48,255,0.2)'">
+        <p style="font-size:13px; color:var(--gray-400);">Click to upload music file</p>
+        <p style="font-size:11px; color:var(--gray-600); margin-top:4px;">MP3, WAV, AAC, M4A</p>
+      </div>
+      <input type="file" id="musicInput" accept="audio/*" style="display:none">
+
+      <!-- AUDIO TRIM EDITOR (shown after upload) -->
+      <div id="audioEditor" style="display:none; margin-top:14px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+          <span style="font-size:18px;">🎵</span>
+          <div style="flex:1; min-width:0;">
+            <div id="musicFileName" style="font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+            <div id="musicUploadStatus" style="font-size:11px; color:var(--gray-400); margin-top:2px;">Uploading...</div>
+          </div>
+          <button onclick="removeMusicFile()" style="background:none; border:none; color:var(--gray-600); cursor:pointer; font-size:16px; padding:4px;">✕</button>
+        </div>
+
+        <!-- Waveform -->
+        <div style="position:relative; margin-bottom:6px;">
+          <div id="waveformContainer" style="height:56px; border-radius:8px; border:1px solid rgba(155,48,255,0.2); background:rgba(155,48,255,0.04); position:relative; overflow:hidden; cursor:pointer;" onclick="waveClick(event)">
+            <canvas id="waveCanvas" style="width:100%; height:100%; display:block;"></canvas>
+            <div id="waveSelection" style="position:absolute; top:0; bottom:0; background:rgba(124,106,247,0.18); border-left:2px solid #7b2fe0; border-right:2px solid #7b2fe0; pointer-events:none; left:0%; width:100%;"></div>
+          </div>
+          <div id="waveHandleStart" style="position:absolute; top:-4px; bottom:-4px; width:12px; background:#7b2fe0; border-radius:3px; cursor:ew-resize; left:0%;" onmousedown="startWaveDrag('start',event)"></div>
+          <div id="waveHandleEnd" style="position:absolute; top:-4px; bottom:-4px; width:12px; background:#7b2fe0; border-radius:3px; cursor:ew-resize; right:0%;" onmousedown="startWaveDrag('end',event)"></div>
+        </div>
+
+        <!-- Time display -->
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+          <div style="flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 12px; text-align:center;">
+            <div style="font-size:10px; color:var(--gray-600); margin-bottom:2px;">START</div>
+            <div id="waveStartTime" style="font-size:15px; font-weight:500; color:var(--white);">0:00</div>
+          </div>
+          <div style="flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 12px; text-align:center;">
+            <div style="font-size:10px; color:var(--gray-600); margin-bottom:2px;">DURATION</div>
+            <div id="waveDurTime" style="font-size:15px; font-weight:500; color:#c984ff;">full</div>
+          </div>
+          <div style="flex:1; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 12px; text-align:center;">
+            <div style="font-size:10px; color:var(--gray-600); margin-bottom:2px;">END</div>
+            <div id="waveEndTime" style="font-size:15px; font-weight:500; color:var(--white);">full</div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+          <button onclick="waveReset()" style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:var(--gray-400); font-size:12px; font-family:'Satoshi',sans-serif; cursor:pointer;">Use full track</button>
+          <button onclick="waveConfirm()" style="flex:2; padding:8px 12px; border-radius:8px; border:none; background:linear-gradient(135deg,#7b2fe0,#c040ff); color:#fff; font-size:12px; font-weight:600; font-family:'Cabinet Grotesk',sans-serif; cursor:pointer;">✓ Use this section</button>
+        </div>
+      </div>
+
+      <p style="font-size:11px; color:var(--gray-600); margin-top:10px;">In your prompt: "add background music quietly", "add music at 30% volume", "mute background music", "lower background audio"</p>
+    </div>
+
+    <!-- OPTIONS -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:14px 16px;">
+        <div style="font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.8px; color:var(--gray-400); margin-bottom:8px;">Output format</div>
+        <select id="outputFormat" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 12px; color:var(--white); font-size:13px; font-family:'Satoshi',sans-serif; outline:none;">
+          <option>MP4 (H.264)</option><option>MP4 (H.265)</option><option>MOV</option><option>WebM</option>
+        </select>
+      </div>
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:14px 16px;">
+        <div style="font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.8px; color:var(--gray-400); margin-bottom:8px;">Export quality</div>
+        <select id="exportQuality" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 12px; color:var(--white); font-size:13px; font-family:'Satoshi',sans-serif; outline:none;">
+          <option>1080p HD</option><option>4K (Plus/Gold)</option><option>720p</option><option>Original</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- SUBMIT -->
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span id="submitNote" style="font-size:12px; color:var(--gray-600);">Upload a video first</span>
+      <button id="submitBtn" onclick="startProcessing()" disabled style="display:flex; align-items:center; gap:8px; padding:12px 28px; border-radius:10px; border:none; background:linear-gradient(135deg,#7b2fe0,#c040ff); color:#fff; font-size:14px; font-weight:700; font-family:'Cabinet Grotesk',sans-serif; cursor:pointer; opacity:0.4; box-shadow:0 0 24px rgba(155,48,255,0.3); transition:all 0.2s;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Start editing
+      </button>
+    </div>
+
+    <!-- PROCESSING -->
+    <div id="processingCard" style="display:none; background:rgba(255,255,255,0.03); border:1px solid rgba(155,48,255,0.15); border-radius:16px; padding:32px; text-align:center; margin-top:24px;">
+      <div style="width:48px; height:48px; border:2px solid rgba(255,255,255,0.08); border-top-color:#c040ff; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 20px;"></div>
+      <h3 style="font-family:'Cabinet Grotesk',sans-serif; font-size:18px; font-weight:700; margin-bottom:8px;">AI is editing your video</h3>
+      <p style="font-size:14px; color:var(--gray-400); margin-bottom:24px;">This may take a few minutes depending on video length</p>
+      <div style="text-align:left; max-width:320px; margin:0 auto;">
+        <div class="proc-step" id="step1"><div class="proc-dot"></div>Transcribing audio to text</div>
+        <div class="proc-step" id="step2"><div class="proc-dot"></div>Analyzing content</div>
+        <div class="proc-step" id="step3"><div class="proc-dot"></div>Cutting and editing</div>
+        <div class="proc-step" id="step4"><div class="proc-dot"></div>Adding captions and effects</div>
+        <div class="proc-step" id="step5"><div class="proc-dot"></div>Exporting and preparing download</div>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+    <div id="resultCard" style="display:none; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); border-radius:16px; padding:32px; text-align:center; margin-top:24px;">
+      <div style="width:52px; height:52px; border-radius:50%; background:rgba(34,197,94,0.15); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3 style="font-family:'Cabinet Grotesk',sans-serif; font-size:20px; font-weight:800; margin-bottom:8px;">Your video is ready!</h3>
+      <p style="font-size:14px; color:var(--gray-400); margin-bottom:24px;">AI successfully processed your video</p>
+      <div id="resultFiles" style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px;"></div>
+      <button onclick="resetApp()" style="padding:10px 24px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:var(--white); font-size:13px; font-family:'Satoshi',sans-serif; cursor:pointer;">← New project</button>
+    </div>
+
+    <!-- ACCOUNT SECTION -->
+    <div style="margin-top:60px; padding-top:32px; border-top:1px solid rgba(255,255,255,0.06);">
+      <h3 style="font-family:'Cabinet Grotesk',sans-serif; font-size:16px; font-weight:700; margin-bottom:20px; color:var(--gray-400);">Account</h3>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+
+        <!-- Twitch connection -->
+        <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px 20px;">
+          <div>
+            <div style="font-size:14px; font-weight:600; margin-bottom:2px;">Twitch Account</div>
+            <div id="twitchAccountStatus" style="font-size:12px; color:var(--gray-400);">Not connected</div>
+          </div>
+          <button id="twitchAccountBtn" onclick="connectTwitch()" style="padding:8px 16px; border-radius:8px; border:1px solid rgba(145,71,255,0.4); background:rgba(145,71,255,0.1); color:#9147ff; font-size:13px; font-family:'Satoshi',sans-serif; cursor:pointer;">Connect Twitch</button>
+        </div>
+
+        <!-- Plan management -->
+        <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px 20px;">
+          <div>
+            <div style="font-size:14px; font-weight:600; margin-bottom:2px;">Plan</div>
+            <div id="accountPlanStatus" style="font-size:12px; color:var(--gray-400);">Loading...</div>
+          </div>
+          <button onclick="manageSubscription()" style="padding:8px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:var(--white); font-size:13px; font-family:'Satoshi',sans-serif; cursor:pointer;">Manage plan</button>
+        </div>
+
+        <!-- Sign out -->
+        <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px 20px;">
+          <div style="font-size:14px; font-weight:600;">Sign out</div>
+          <button onclick="logoutUser()" style="padding:8px 16px; border-radius:8px; border:1px solid rgba(255,100,100,0.3); background:rgba(255,100,100,0.05); color:#f87171; font-size:13px; font-family:'Satoshi',sans-serif; cursor:pointer;">Sign out</button>
+        </div>
+
+      </div>
+
+      <!-- Contact support -->
+      <div style="margin-top:20px; text-align:center; font-size:12px; color:var(--gray-400);">
+        Need help? <a href="mailto:your@growth-partner.agency" style="color:#c984ff; text-decoration:none;">your@growth-partner.agency</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div id="authModal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#0e0e1a; border:1px solid rgba(155,48,255,0.2); border-radius:20px; width:100%; max-width:420px; padding:36px 32px; position:relative; animation:modalIn 0.25s ease; box-shadow:0 0 80px rgba(155,48,255,0.15);">
+    <button onclick="closeAuth()" style="position:absolute; top:16px; right:16px; background:none; border:none; color:var(--gray-600); cursor:pointer; padding:4px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div style="font-family:'Cabinet Grotesk',sans-serif; font-size:14px; font-weight:700; margin-bottom:24px; color:var(--gray-400);">Growth Partner <span style="color:#c984ff;">Edit Tool</span></div>
+    <div style="display:flex; gap:0; margin-bottom:24px; background:rgba(255,255,255,0.05); border-radius:10px; padding:4px;">
+      <button id="tabRegister" onclick="switchTab('register')" style="flex:1; padding:8px; border-radius:8px; border:none; background:linear-gradient(135deg,#7b2fe0,#c040ff); color:#fff; font-size:13px; font-weight:700; font-family:'Cabinet Grotesk',sans-serif; cursor:pointer;">Sign up</button>
+      <button id="tabLogin" onclick="switchTab('login')" style="flex:1; padding:8px; border-radius:8px; border:none; background:transparent; color:var(--gray-400); font-size:13px; font-weight:500; font-family:'Cabinet Grotesk',sans-serif; cursor:pointer;">Sign in</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="formRegister">
+      <div style="background:rgba(155,48,255,0.08); border:1px solid rgba(155,48,255,0.2); border-radius:10px; padding:12px 14px; margin-bottom:20px; display:flex; gap:10px;">
+        <span style="font-size:16px;">🎁</span>
+        <span style="font-size:13px; color:var(--gray-400);"><strong style="color:#c984ff;">7 days · 5h free</strong> — no credit card needed.</span>
+      </div>
+      <div style="margin-bottom:14px;"><label style="display:block; font-size:12px; font-weight:500; color:var(--gray-400); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.6px;">Name</label><input id="regName" type="text" placeholder="Your name" style="width:100%; padding:11px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:var(--white); font-size:14px; font-family:'Satoshi',sans-serif; outline:none;"></div>
+      <div style="margin-bottom:14px;"><label style="display:block; font-size:12px; font-weight:500; color:var(--gray-400); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.6px;">Email</label><input id="regEmail" type="email" placeholder="email@example.com" style="width:100%; padding:11px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:var(--white); font-size:14px; font-family:'Satoshi',sans-serif; outline:none;"></div>
+      <div style="margin-bottom:14px;"><label style="display:block; font-size:12px; font-weight:500; color:var(--gray-400); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.6px;">Password</label><input id="regPassword" type="password" placeholder="At least 8 characters" style="width:100%; padding:11px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:var(--white); font-size:14px; font-family:'Satoshi',sans-serif; outline:none;"></div>
+      <div id="regError" style="display:none; font-size:13px; color:#f87171; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px;"></div>
+      <button onclick="handleRegister()" style="width:100%; padding:12px; border-radius:10px; border:none; background:linear-gradient(135deg,#7b2fe0,#c040ff); color:#fff; font-size:14px; font-weight:700; font-family:'Cabinet Grotesk',sans-serif; cursor:pointer; box-shadow:0 0 24px rgba(155,48,255,0.4);">Create account and start free →</button>
+      <p style="text-align:center; font-size:12px; color:var(--gray-600); margin-top:14px;">Already have an account? <a onclick="switchTab('login')" style="color:var(--gray-400); cursor:pointer; text-decoration:underline;">Sign in</a></p>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="formLogin" style="display:none;">
+      <div style="margin-bottom:14px;"><label style="display:block; font-size:12px; font-weight:500; color:var(--gray-400); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.6px;">Email</label><input id="loginEmail" type="email" placeholder="email@example.com" style="width:100%; padding:11px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:var(--white); font-size:14px; font-family:'Satoshi',sans-serif; outline:none;"></div>
+      <div style="margin-bottom:14px;"><label style="display:block; font-size:12px; font-weight:500; color:var(--gray-400); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.6px;">Password</label><input id="loginPassword" type="password" placeholder="Your password" style="width:100%; padding:11px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:10px; color:var(--white); font-size:14px; font-family:'Satoshi',sans-serif; outline:none;"></div>
+      <div id="loginError" style="display:none; font-size:13px; color:#f87171; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 14px; margin-bottom:14px;"></div>
+      <button onclick="handleLogin()" style="width:100%; padding:12px; border-radius:10px; border:none; background:linear-gradient(135deg,#7b2fe0,#c040ff); color:#fff; font-size:14px; font-weight:700; font-family:'Cabinet Grotesk',sans-serif; cursor:pointer; box-shadow:0 0 24px rgba(155,48,255,0.4);">Sign in →</button>
+      <p style="text-align:center; font-size:12px; color:var(--gray-600); margin-top:14px;">No account? <a onclick="switchTab('register')" style="color:var(--gray-400); cursor:pointer; text-decoration:underline;">Sign up for free</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- TRIAL EXPIRED MODAL -->
+<div id="trialExpiredModal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.9); backdrop-filter:blur(10px); align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#0e0e1a; border:1px solid rgba(255,255,255,0.1); border-radius:20px; max-width:400px; width:100%; padding:40px 32px; text-align:center; box-shadow:0 0 60px rgba(155,48,255,0.1);">
+    <div style="width:56px; height:56px; border-radius:50%; background:rgba(239,68,68,0.1); display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <h2 style="font-family:'Cabinet Grotesk',sans-serif; font-size:22px; font-weight:800; margin-bottom:8px;" id="trialExpiredTitle">Trial expired</h2>
+    <p style="font-size:14px; color:var(--gray-400); margin-bottom:28px;" id="trialExpiredMsg">Your free trial has ended. Choose a plan to continue.</p>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+      <div onclick="selectPlan('basic')" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 16px; cursor:pointer; transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(155,48,255,0.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+        <div><div style="font-size:14px; font-weight:600; font-family:'Cabinet Grotesk',sans-serif;">Basic</div><div style="font-size:12px; color:var(--gray-400);">20 hours / month</div></div>
+        <div style="font-size:14px; color:#c984ff; font-weight:600;">$29/mo</div>
+      </div>
+      <div onclick="selectPlan('plus')" style="display:flex; justify-content:space-between; align-items:center; background:rgba(155,48,255,0.08); border:1px solid rgba(155,48,255,0.25); border-radius:10px; padding:12px 16px; cursor:pointer; transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(155,48,255,0.5)'" onmouseout="this.style.borderColor='rgba(155,48,255,0.25)'">
+        <div><div style="font-size:14px; font-weight:600; font-family:'Cabinet Grotesk',sans-serif;">Plus</div><div style="font-size:12px; color:var(--gray-400);">60 hours / month</div></div>
+        <div style="font-size:14px; color:#c984ff; font-weight:600;">$59/mo</div>
+      </div>
+      <div onclick="selectPlan('gold')" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 16px; cursor:pointer; transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(155,48,255,0.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+        <div><div style="font-size:14px; font-weight:600; font-family:'Cabinet Grotesk',sans-serif;">Gold — Unlimited</div><div style="font-size:12px; color:var(--gray-400);">Desktop app · your GPU</div></div>
+        <div style="font-size:14px; color:#c984ff; font-weight:600;">$99/mo</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = 'https://test-version-production.up.railway.app';
+  const SUPABASE_URL = 'https://lefatfpyifacubdeksfc.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_4asFl_IEfPnuUyT0zz4AMw_Q3YSqD4N';
+  const TRIAL_HOURS_LIMIT = 5;
+
+  // Supabase JS client — handles token refresh automatically
+  const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentUser = null;
+  let authToken = null;
+  let selectedFile = null;
+  let uploadId = null;
+  let uploadDone = false;
+  let currentProfile = null;
+  let musicUploadId = null;
+  let musicUploaded = false;
+
+  // ── SUPABASE AUTH (using official JS client) ──
+  async function supabaseSignUp(email, password, name) {
+    const { data, error } = await sbClient.auth.signUp({
+      email, password,
+      options: { data: { name } }
+    });
+    if (error) return { error };
+    return data;
+  }
+
+  async function supabaseSignIn(email, password) {
+    const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+    if (error) return { error };
+    return data;
+  }
+
+  function saveSession(session) {
+    if (!session) return;
+    currentUser = session.user;
+    authToken = session.access_token;
+  }
+
+  async function loadSession() {
+    try {
+      const { data: { session } } = await sbClient.auth.getSession();
+      if (!session) return false;
+      currentUser = session.user;
+      authToken = session.access_token;
+      return true;
+    } catch(e) { return false; }
+  }
+
+  // Listen for auth state changes (handles auto-refresh)
+  let appVisible = false;
+
+  sbClient.auth.onAuthStateChange(async (event, session) => {
+    console.log('Auth event:', event, session ? 'has session' : 'no session');
+
+    if (event === 'SIGNED_OUT') {
+      // Only clear if user explicitly signed out (not during token refresh cycle)
+      if (!session) {
+        currentUser = null;
+        authToken = null;
+        // Only go to landing if app is visible and user is truly signed out
+        if (appVisible) {
+          appVisible = false;
+          document.getElementById('landingContent').style.display = '';
+          document.getElementById('appSection').style.display = 'none';
+          document.querySelector('.nav-right').innerHTML = `
+            <div class="trial-pill"><div class="dot"></div>7 days · 5h free trial</div>
+            <button class="btn-ghost" onclick="showAuth('login')">Sign in</button>
+            <button class="btn-primary" onclick="showAuth('register')">Start for free →</button>`;
+        }
+      }
+    } else if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED')) {
+      const wasSignedOut = !authToken;
+      currentUser = session.user;
+      authToken = session.access_token;
+
+      // If user just got a valid session and app isn't showing, fetch profile and show app
+      if (wasSignedOut && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+        try {
+          currentProfile = await fetchProfile();
+        } catch(e) { console.error('fetchProfile error:', e); }
+        if (!isTrialExpired(currentProfile)) {
+          appVisible = true;
+          document.getElementById('landingContent').style.display = 'none';
+          document.getElementById('appSection').style.display = 'block';
+          updateNav();
+          updateTrialBar(currentProfile);
+          updateAccountSection();
+          checkPendingJobs();
+        } else {
+          showTrialExpired(currentProfile);
+        }
+      }
+    }
+  });
+
+  async function fetchProfile() {
+    const res = await fetch(API + '/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    if (!res.ok) return null;
+    currentProfile = await res.json();
+    return currentProfile;
+  }
+
+  // ── TRIAL CHECK ──
+  function isTrialExpired(profile) {
+    if (!profile) return false;
+    if (profile.plan !== 'trial') return false;
+    const timeExpired = profile.trial_end && new Date() > new Date(profile.trial_end);
+    const hoursExpired = (profile.hours_used || 0) >= TRIAL_HOURS_LIMIT;
+    return timeExpired || hoursExpired;
+  }
+
+  function getTrialExpiredMessage(profile) {
+    if (!profile) return 'Your free trial has ended.';
+    const hoursExpired = (profile.hours_used || 0) >= TRIAL_HOURS_LIMIT;
+    if (hoursExpired) return `You've used all ${TRIAL_HOURS_LIMIT} free hours. Choose a plan to continue.`;
+    return 'Your 7-day free trial has ended. Choose a plan to continue.';
+  }
+
+  function updateTrialBar(profile) {
+    if (!profile || profile.plan !== 'trial') {
+      document.getElementById('trialBar').style.display = 'none';
+      return;
+    }
+    const used = profile.hours_used || 0;
+    const pct = Math.min(100, (used / TRIAL_HOURS_LIMIT) * 100);
+    document.getElementById('trialBar').style.display = 'block';
+    document.getElementById('trialUsageText').textContent = `${used.toFixed(1)} / ${TRIAL_HOURS_LIMIT}h used`;
+    document.getElementById('trialUsageFill').style.width = pct + '%';
+    if (pct > 80) document.getElementById('trialUsageFill').style.background = 'linear-gradient(90deg,#ef4444,#f87171)';
+  }
+
+  // ── AUTH MODAL ──
+  function showAuth(tab) {
+    const modal = document.getElementById('authModal');
+    modal.style.display = 'flex';
+    switchTab(tab || 'register');
+  }
+
+  function closeAuth() {
+    document.getElementById('authModal').style.display = 'none';
+  }
+
+  function switchTab(tab) {
+    document.getElementById('formRegister').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('formLogin').style.display = tab === 'login' ? '' : 'none';
+    const regBtn = document.getElementById('tabRegister');
+    const loginBtn = document.getElementById('tabLogin');
+    if (tab === 'register') {
+      regBtn.style.background = 'linear-gradient(135deg,#7b2fe0,#c040ff)';
+      regBtn.style.color = '#fff';
+      loginBtn.style.background = 'transparent';
+      loginBtn.style.color = 'var(--gray-400)';
+    } else {
+      loginBtn.style.background = 'linear-gradient(135deg,#7b2fe0,#c040ff)';
+      loginBtn.style.color = '#fff';
+      regBtn.style.background = 'transparent';
+      regBtn.style.color = 'var(--gray-400)';
+    }
+  }
+
+  async function handleRegister() {
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim().toLowerCase();
+    const password = document.getElementById('regPassword').value;
+    const errEl = document.getElementById('regError');
+    errEl.style.display = 'none';
+
+    if (!name) { showErr(errEl, 'Please enter your name.'); return; }
+    if (!email.includes('@')) { showErr(errEl, 'Please enter a valid email.'); return; }
+    if (password.length < 8) { showErr(errEl, 'Password must be at least 8 characters.'); return; }
+
+    const data = await supabaseSignUp(email, password, name);
+    if (data.error) { showErr(errEl, data.error.message); return; }
+
+    // Get session after signup
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (!session) {
+      closeAuth();
+      alert('Account created! Please check your email and confirm your address, then sign in.');
+      return;
+    }
+
+    saveSession(session);
+    await fetch(API + '/auth/profile', { method: 'POST', headers: { 'Authorization': 'Bearer ' + authToken } });
+    currentProfile = await fetchProfile();
+
+    closeAuth();
+    enterApp();
+  }
+
+  async function handleLogin() {
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const password = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    const btn = document.querySelector('button[onclick="handleLogin()"]');
+    errEl.style.display = 'none';
+    if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
+
+    try {
+      const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Sign in →'; }
+        showErr(errEl, error.message.includes('confirm') ? 'Please confirm your email first.' : 'Incorrect email or password.');
+        return;
+      }
+
+      if (!data?.session) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Sign in →'; }
+        showErr(errEl, 'Sign in failed. Please try again.');
+        return;
+      }
+
+      currentUser = data.session.user;
+      authToken = data.session.access_token;
+
+      // Close modal immediately — don't wait for anything
+      closeAuth();
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign in →'; }
+
+      // Show app right away
+      enterApp();
+
+      // Load profile in background
+      try {
+        currentProfile = await fetchProfile();
+        updateNav();
+        updateTrialBar(currentProfile);
+        if (isTrialExpired(currentProfile)) showTrialExpired(currentProfile);
+      } catch(e) { console.error('fetchProfile error:', e); }
+
+    } catch(e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign in →'; }
+      showErr(errEl, 'Something went wrong. Please try again.');
+      console.error('Login error:', e);
+    }
+  }
+
+  function showErr(el, msg) {
+    el.textContent = msg; el.style.display = 'block';
+  }
+
+  // ── APP ──
+  function enterApp() {
+    appVisible = true;
+    document.getElementById('landingContent').style.display = 'none';
+    document.getElementById('appSection').style.display = 'block';
+    updateNav();
+    updateTrialBar(currentProfile);
+    if (currentProfile && currentProfile.plan === 'trial') {
+      document.getElementById('appSubtitle').innerHTML = '🎁 <strong style="color:#c984ff;">7-day trial active</strong> — upload a video and tell AI what to do';
+    }
+    window.scrollTo(0, 0);
+    checkPendingJobs();
+  }
+
+  async function checkPendingJobs() {
+    if (!authToken) return;
+    try {
+      // Always get fresh token before checking pending jobs
+      try {
+        const { data: { session } } = await sbClient.auth.getSession();
+        if (session) authToken = session.access_token;
+      } catch(e) {}
+
+      if (!authToken) return;
+
+      const { data: { session: freshSess } } = await sbClient.auth.getSession();
+      if (freshSess) authToken = freshSess.access_token;
+
+      const res = await fetch(API + '/jobs/pending', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      if (!res.ok) return;
+      const job = await res.json();
+      if (!job || !job.id) return;
+      if (['processing','transcribing','analyzing','editing','uploading'].includes(job.status)) {
+        document.getElementById('processingCard').style.display = 'block';
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('appSubtitle').innerHTML = '⏳ <strong style="color:#c984ff;">Processing your video...</strong> — you can leave and come back';
+        resumePolling(job.id);
+      } else if (job.status === 'done' && job.result) {
+        try { showResult(JSON.parse(job.result), job.id); } catch(e) {}
+      }
+    } catch(e) { console.log('No pending jobs:', e); }
+  }
+
+  function resumePolling(jobId) {
+    const stepMap = { transcribing:'step1', analyzing:'step2', editing:'step3', uploading:'step4', done:'step5' };
+    const poll = setInterval(async () => {
+      try {
+        const { data: { session: s } } = await sbClient.auth.getSession();
+        if (s) authToken = s.access_token;
+        const res = await fetch(API + '/jobs/' + jobId, { headers: { 'Authorization': 'Bearer ' + authToken } });
+        const job = await res.json();
+        const cur = stepMap[job.status];
+        if (cur) {
+          ['step1','step2','step3','step4','step5'].forEach(id => document.getElementById(id).classList.remove('active'));
+          document.getElementById(cur).classList.add('active');
+        }
+        if (job.status === 'done') {
+          clearInterval(poll);
+          ['step1','step2','step3','step4','step5'].forEach(id => { document.getElementById(id).classList.remove('active'); document.getElementById(id).classList.add('done'); });
+          currentProfile = await fetchProfile();
+          updateTrialBar(currentProfile);
+          updateNav();
+          try { showResult(JSON.parse(job.result), jobId); } catch(e) {}
+        } else if (job.status === 'error') {
+          clearInterval(poll);
+          document.getElementById('processingCard').style.display = 'none';
+          document.getElementById('submitBtn').disabled = false;
+          alert('Processing error: ' + (job.error || 'Unknown error'));
+        }
+      } catch(e) { console.error('Poll error:', e); }
+    }, 5000);
+  }
+
+  function updateNav() {
+    if (!currentUser) return;
+    const name = currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'User';
+    const navRight = document.querySelector('.nav-right');
+    let pillHTML = '';
+    if (currentProfile && currentProfile.plan === 'trial') {
+      const daysLeft = currentProfile.trial_end ? Math.max(0, Math.ceil((new Date(currentProfile.trial_end) - new Date()) / 86400000)) : 7;
+      const hoursLeft = Math.max(0, TRIAL_HOURS_LIMIT - (currentProfile.hours_used || 0));
+      pillHTML = `<div class="trial-pill"><div class="dot"></div>Trial: ${daysLeft}d · ${hoursLeft.toFixed(1)}h left</div>`;
+    } else if (currentProfile) {
+      pillHTML = `<div class="trial-pill" style="background:rgba(155,48,255,0.15);border-color:rgba(155,48,255,0.4);color:#c984ff;"><div class="dot"></div>${(currentProfile.plan||'').toUpperCase()}</div>`;
+    }
+    const twitchBtn = currentProfile && currentProfile.twitch_username
+        ? `<button class="btn-ghost" style="color:#9147ff;" onclick="connectTwitch()">🟣 ${currentProfile.twitch_username}</button>`
+        : `<button class="btn-ghost" onclick="connectTwitch()">🟣 Connect Twitch</button>`;
+    const editorBtn = !appVisible ? `<button class="btn-primary" onclick="goToEditor()">Open editor →</button>` : '';
+    navRight.innerHTML = `${pillHTML}<span style="font-size:13px;color:var(--gray-400);">Hey, ${name}</span>${twitchBtn}${editorBtn}<button class="btn-ghost" onclick="logoutUser()">Sign out</button>`;
+  }
+
+  async function manageSubscription() {
+    if (!currentProfile) return;
+    const plan = currentProfile.plan || 'trial';
+    const customerId = currentProfile.stripe_customer_id;
+    if (plan !== 'trial' && customerId) {
+      try {
+        const res = await fetch(API + '/billing/portal', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          window.open(data.url, '_blank');
+        } else {
+          alert('Could not open billing portal. Contact support.');
+        }
+      } catch(e) {
+        alert('Could not open billing portal. Contact support.');
+      }
+    } else {
+      showTrialExpired(currentProfile);
+    }
+  }
+
+  function updateAccountSection() {
+    if (!currentProfile) return;
+    // Twitch status
+    const twitchStatus = document.getElementById('twitchAccountStatus');
+    const twitchBtn = document.getElementById('twitchAccountBtn');
+    if (twitchStatus && currentProfile.twitch_username) {
+      twitchStatus.innerHTML = `<span style="color:#9147ff;">✓ Connected as ${currentProfile.twitch_username}</span>`;
+      if (twitchBtn) twitchBtn.textContent = 'Change account';
+    }
+    // Plan status
+    const planStatus = document.getElementById('accountPlanStatus');
+    if (planStatus) {
+      const plan = currentProfile.plan || 'trial';
+      const hoursUsed = (currentProfile.hours_used || 0).toFixed(1);
+      const hoursLimit = currentProfile.hours_limit || 5;
+      if (plan === 'trial') {
+        planStatus.textContent = `Free trial — ${hoursUsed}/${hoursLimit}h used`;
+      } else {
+        planStatus.textContent = plan.charAt(0).toUpperCase() + plan.slice(1) + ' plan';
+      }
+    }
+  }
+
+  function goToEditor() {
+    appVisible = true;
+    document.getElementById('landingContent').style.display = 'none';
+    document.getElementById('appSection').style.display = 'block';
+    updateNav();
+    updateTrialBar(currentProfile);
+    checkPendingJobs();
+  }
+
+  function connectTwitch() {
+    const url = API + '/auth/twitch?token=' + encodeURIComponent(authToken) + '&force=true';
+    window.open(url, 'twitch_oauth', 'width=600,height=700');
+  }
+
+  window.addEventListener('message', async (e) => {
+    if (e.data && e.data.type === 'twitch_connected') {
+      currentProfile = await fetchProfile();
+      updateNav();
+      // Update VOD zone badge if stream is selected
+      if (selectedContentType === 'stream') {
+        const badge = document.getElementById('vodPlatformBadge');
+        if (badge && badge.innerHTML.includes('Twitch')) {
+          badge.innerHTML += ' &nbsp;·&nbsp; <span style="color:#9147ff;">✓ Connected as ' + e.data.username + '</span>';
+        }
+      }
+    }
+  });
+
+  async function logoutUser() {
+    appVisible = false;
+    await sbClient.auth.signOut();
+    currentUser = null; authToken = null; currentProfile = null;
+    document.getElementById('landingContent').style.display = '';
+    document.getElementById('appSection').style.display = 'none';
+    document.querySelector('.nav-right').innerHTML = `
+      <div class="trial-pill"><div class="dot"></div>7 days · 5h free trial</div>
+      <button class="btn-ghost" onclick="showAuth('login')">Sign in</button>
+      <button class="btn-primary" onclick="showAuth('register')">Start for free →</button>`;
+    window.scrollTo(0, 0);
+  }
+
+  function showTrialExpired(profile) {
+    document.getElementById('trialExpiredTitle').textContent = 'Trial expired';
+    document.getElementById('trialExpiredMsg').textContent = getTrialExpiredMessage(profile);
+    document.getElementById('trialExpiredModal').style.display = 'flex';
+  }
+
+  async function selectPlan(plan) {
+    if (!authToken) { showAuth('login'); return; }
+    try {
+      const res = await fetch(API + '/billing/checkout', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data.checkout_url) window.location.href = data.checkout_url;
+      else alert('Stripe not fully configured yet. Coming soon!');
+    } catch(e) { alert('Something went wrong. Please try again.'); }
+  }
+
+  // ── FILE UPLOAD ──
+  document.getElementById('fileInput').addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('uploadZone').style.borderColor = 'rgba(155,48,255,0.25)';
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  }
+
+  function handleFile(file) {
+    selectedFile = file;
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatBytes(file.size);
+    document.getElementById('uploadZone').style.display = 'none';
+    document.getElementById('fileSelected').style.display = 'flex';
+    startUpload();
+  }
+
+  function resetFile() {
+    selectedFile = null; uploadDone = false; uploadId = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('uploadZone').style.display = '';
+    document.getElementById('fileSelected').style.display = 'none';
+    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('progressFill').style.width = '0%';
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.style.opacity = '0.4';
+    document.getElementById('submitNote').textContent = 'Upload a video first';
+  }
+
+  async function startUpload() {
+    if (!authToken) { showAuth('login'); return; }
+    const progress = document.getElementById('uploadProgress');
+    const fill = document.getElementById('progressFill');
+    const pct = document.getElementById('progressPct');
+    const text = document.getElementById('progressText');
+    progress.style.display = 'block';
+
+    uploadId = crypto.randomUUID();
+    const CHUNK = 5 * 1024 * 1024;
+    const total = Math.ceil(selectedFile.size / CHUNK);
+    const CONCURRENCY = 3;
+    const MAX_RETRIES = 4;
+    const RETRY_DELAY = [1000, 2000, 4000, 8000];
+
+    async function getFreshToken() {
+      try {
+        const { data: { session } } = await sbClient.auth.getSession();
+        if (session) { authToken = session.access_token; }
+      } catch(e) { /* keep existing token */ }
+      return authToken;
+    }
+
+    async function uploadChunk(i) {
+      const blob = selectedFile.slice(i * CHUNK, Math.min((i+1)*CHUNK, selectedFile.size));
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const token = await getFreshToken();
+          if (!token) throw new Error('Not authenticated');
+          const fd = new FormData();
+          fd.append('file', new File([blob], selectedFile.name));
+          fd.append('upload_id', uploadId);
+          fd.append('chunk_index', i);
+          fd.append('total_chunks', total);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 30000);
+          const res = await fetch(API + '/upload/chunk', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+            body: fd,
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (res.status === 401) {
+            // Token still bad after refresh — force re-fetch and retry
+            await sbClient.auth.refreshSession();
+            throw new Error('401 - retrying with refreshed token');
+          }
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return;
+        } catch(err) {
+          if (attempt === MAX_RETRIES) throw new Error('Chunk ' + i + ' failed after ' + MAX_RETRIES + ' retries: ' + err.message);
+          await new Promise(r => setTimeout(r, RETRY_DELAY[attempt]));
+        }
+      }
+    }
+
+    try {
+      let completed = 0;
+      for (let i = 0; i < total; i += CONCURRENCY) {
+        const batch = [];
+        for (let j = i; j < Math.min(i + CONCURRENCY, total); j++) {
+          batch.push(uploadChunk(j));
+        }
+        await Promise.all(batch);
+        completed = Math.min(i + CONCURRENCY, total);
+        const p = Math.round((completed / total) * 100);
+        fill.style.width = p + '%';
+        pct.textContent = p + '%';
+      }
+      text.textContent = 'Video uploaded ✓';
+      uploadDone = true;
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = false; btn.style.opacity = '1';
+      document.getElementById('submitNote').textContent = 'Ready to process';
+    } catch(err) {
+      console.error('Upload error:', err);
+      text.textContent = 'Upload failed — check your connection and try again.';
+      pct.textContent = '';
+      fill.style.width = '0%';
+      uploadDone = false; uploadId = null;
+    }
+  }
+
+  // ── PROCESSING ──
+  async function startProcessing() {
+    const prompt = document.getElementById('promptInput').value.trim();
+    if (!prompt) { document.getElementById('promptInput').focus(); return; }
+
+    // Stream uses VOD URL, others need upload
+    if (selectedContentType === 'stream') {
+      if (!vodUrl || !authToken) return;
+    } else {
+      if (!uploadId || !authToken) return;
+    }
+
+    // Check trial hours limit before starting
+    if (currentProfile && currentProfile.plan === 'trial') {
+      if ((currentProfile.hours_used || 0) >= TRIAL_HOURS_LIMIT) {
+        showTrialExpired(currentProfile);
+        return;
+      }
+    }
+
+    document.getElementById('processingCard').style.display = 'block';
+    document.getElementById('submitBtn').disabled = true;
+
+    const fmt = document.getElementById('outputFormat').value.includes('MOV') ? 'mov' :
+                document.getElementById('outputFormat').value.includes('WebM') ? 'webm' : 'mp4';
+    const qual = document.getElementById('exportQuality').value.includes('4K') ? '4K' :
+                 document.getElementById('exportQuality').value.includes('720') ? '720p' : '1080p';
+
+    let jobId;
+    try {
+      const res = await fetch(API + '/process', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ upload_id: uploadId, prompt, output_format: fmt, quality: qual, music_upload_id: musicUploaded ? musicUploadId : null, music_trim_start: musicTrimStart, music_trim_end: musicTrimEnd, content_type: selectedContentType, vod_url: selectedContentType === 'stream' ? vodUrl : null }),
+      });
+      const data = await res.json();
+      if (res.status === 402) {
+        document.getElementById('processingCard').style.display = 'none';
+        document.getElementById('submitBtn').disabled = false;
+        showTrialExpired(currentProfile);
+        return;
+      }
+      if (!res.ok) throw new Error(data.detail || 'Processing failed');
+      jobId = data.job_id;
+    } catch(err) {
+      alert('Error: ' + err.message);
+      document.getElementById('processingCard').style.display = 'none';
+      document.getElementById('submitBtn').disabled = false;
+      return;
+    }
+
+    const stepMap = { transcribing:'step1', analyzing:'step2', editing:'step3', uploading:'step4', done:'step5' };
+    let lastStep = null;
+
+    const poll = setInterval(async () => {
+      try {
+        // Ensure we have fresh token before polling
+        const { data: { session: freshSession } } = await sbClient.auth.getSession();
+        if (freshSession) authToken = freshSession.access_token;
+
+        const res = await fetch(API + '/jobs/' + jobId, { headers: { 'Authorization': 'Bearer ' + authToken } });
+        const job = await res.json();
+        const cur = stepMap[job.status];
+        if (cur && cur !== lastStep) {
+          if (lastStep) { document.getElementById(lastStep).classList.remove('active'); document.getElementById(lastStep).classList.add('done'); }
+          document.getElementById(cur).classList.add('active');
+          lastStep = cur;
+        }
+        if (job.status === 'done') {
+          clearInterval(poll);
+          document.getElementById('step5').classList.remove('active');
+          document.getElementById('step5').classList.add('done');
+          currentProfile = await fetchProfile();
+          updateTrialBar(currentProfile);
+          updateNav();
+          showResult(JSON.parse(job.result), jobId);
+        } else if (job.status === 'error') {
+          clearInterval(poll);
+          document.getElementById('processingCard').style.display = 'none';
+          document.getElementById('submitBtn').disabled = false;
+          // Check if error is trial related
+          if (job.error && job.error.includes('trial')) {
+            currentProfile = await fetchProfile();
+            showTrialExpired(currentProfile);
+          } else {
+            alert('Error: ' + (job.error || 'Unknown error'));
+          }
+        }
+      } catch(e) { console.error(e); }
+    }, 3000);
+  }
+
+  function showResult(files, jobId) {
+    document.getElementById('processingCard').style.display = 'none';
+    const resultCard = document.getElementById('resultCard');
+    if (resultCard.style.display === 'block') return; // Already shown, don't re-show
+    resultCard.style.display = 'block';
+    if (jobId) showFeedbackWidget(jobId);
+    const container = document.getElementById('resultFiles');
+    if (!files || !files.length) { container.innerHTML = '<p style="color:var(--gray-400);font-size:14px;">No output files.</p>'; return; }
+    container.innerHTML = files.map(f => `
+      <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:12px 16px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(155,48,255,0.15);display:flex;align-items:center;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c984ff" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:500;">${f.filename}</div>
+            <div style="font-size:12px;color:var(--gray-400);">${f.duration?Math.round(f.duration)+'s · ':''}${f.size_mb?f.size_mb+' MB':''}</div>
+          </div>
+        </div>
+        <a href="${f.url}" download="${f.filename}" target="_blank" style="padding:6px 14px;border-radius:6px;background:rgba(155,48,255,0.15);border:1px solid rgba(155,48,255,0.3);color:#c984ff;font-size:12px;font-weight:600;text-decoration:none;font-family:'Cabinet Grotesk',sans-serif;" onclick="this.textContent='Downloading...'">Download</a>
+      </div>
+    `).join('');
+  }
+
+  function resetApp() {
+    feedbackShown = false;
+    resetFile();
+    document.getElementById('promptInput').value = '';
+    document.getElementById('processingCard').style.display = 'none';
+    document.getElementById('resultCard').style.display = 'none';
+    ['step1','step2','step3','step4','step5'].forEach(id => {
+      document.getElementById(id).classList.remove('active','done');
+    });
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('submitBtn').style.opacity = '0.4';
+  }
+
+  // ── CONTENT TYPE ──
+  let selectedContentType = 'video';
+
+  const QUICK_PROMPTS = {
+    short_clip: [
+      { label: '↕️ Convert to vertical', text: 'Convert to vertical format (9:16) for TikTok and Reels' },
+      { label: '🎵 Add background music', text: 'Add background music quietly' },
+      { label: '💬 Add captions', text: 'Add automatic captions' },
+      { label: '🎬 Cinematic look', text: 'Add cinematic color grade and vignette' },
+      { label: '🔍 Zoom effect', text: 'Add zoom effect' },
+      { label: '✨ Fade in/out', text: 'Add fade in and fade out' },
+      { label: '🔆 Sharpen image', text: 'Sharpen the image' },
+    ],
+    video: [
+      { label: '⭐ Find best moments', text: 'Find the 3 best moments and create clips from them' },
+      { label: '↕️ Best moments vertical', text: 'Find the 3 best moments and convert to vertical format (9:16)' },
+      { label: '✂️ Split into parts', text: 'Split the video into 3 equal parts' },
+      { label: '💬 Add captions', text: 'Add automatic captions to the full video' },
+      { label: '🎵 Add background music', text: 'Add background music quietly' },
+    ],
+    stream: [
+      { label: '😂 Find funniest moments', text: 'Find the 3 funniest moments and create clips from them' },
+      { label: '↕️ Funniest moments vertical', text: 'Find the 3 funniest moments and convert to vertical format (9:16) for TikTok' },
+      { label: '🔥 Find most hype moments', text: 'Find the 3 most hype and exciting moments from the stream' },
+      { label: '✂️ Split into parts', text: 'Split the stream into 3 equal parts' },
+      { label: '🎵 Add background music', text: 'Add background music quietly' },
+    ],
+  };
+
+  function selectContentType(type) {
+    selectedContentType = type;
+    // Update card styles
+    ['short_clip', 'video', 'stream'].forEach(t => {
+      const card = document.getElementById('ct_' + t);
+      if (t === type) {
+        card.style.borderColor = 'rgba(155,48,255,0.6)';
+        card.style.background = 'rgba(155,48,255,0.1)';
+        card.style.transform = 'translateY(-2px)';
+        card.style.boxShadow = '0 8px 24px rgba(155,48,255,0.2)';
+      } else {
+        card.style.borderColor = 'rgba(255,255,255,0.1)';
+        card.style.background = 'rgba(255,255,255,0.02)';
+        card.style.transform = '';
+        card.style.boxShadow = '';
+      }
+    });
+    // Show VOD zone for stream, upload zone for others
+    const isStream = type === 'stream';
+    document.getElementById('vodZone').style.display = isStream ? 'block' : 'none';
+    const uploadZone = document.getElementById('uploadZone');
+    const fileSelected = document.getElementById('fileSelected');
+    if (isStream) {
+      uploadZone.style.display = 'none';
+      if (fileSelected) fileSelected.style.display = 'none';
+    } else {
+      // Only show upload zone if no file selected
+      if (!selectedFile) uploadZone.style.display = '';
+    }
+    // Update quick prompts
+    updateQuickPrompts(type);
+    // Update placeholder
+    const placeholders = {
+      short_clip: 'E.g: Convert to vertical, add captions, add background music...',
+      video: 'E.g: Find the 3 best moments, split into parts, add captions...',
+      stream: 'E.g: Find the 3 funniest moments, find most hype plays...',
+    };
+    document.getElementById('promptInput').placeholder = placeholders[type];
+  }
+
+  let vodUrl = '';
+  function handleVodInput(val) {
+    vodUrl = val.trim();
+    const badge = document.getElementById('vodPlatformBadge');
+    const btn = document.getElementById('submitBtn');
+    if (vodUrl.includes('twitch.tv/videos')) {
+      badge.innerHTML = '✓ <span style="color:#9147ff">Twitch</span> VOD detected';
+      btn.disabled = false; btn.style.opacity = '1';
+    } else if (vodUrl.includes('kick.com')) {
+      badge.innerHTML = '✓ <span style="color:#53fc18">Kick</span> VOD detected';
+      btn.disabled = false; btn.style.opacity = '1';
+    } else if (vodUrl.includes('youtube.com') || vodUrl.includes('youtu.be')) {
+      badge.innerHTML = '✓ <span style="color:#ff0000">YouTube</span> VOD detected';
+      btn.disabled = false; btn.style.opacity = '1';
+    } else if (vodUrl.length > 0) {
+      badge.innerHTML = '⚠️ Paste a Twitch, Kick or YouTube URL';
+      btn.disabled = true; btn.style.opacity = '0.5';
+    } else {
+      badge.innerHTML = '';
+      btn.disabled = true; btn.style.opacity = '0.5';
+    }
+  }
+
+  function updateQuickPrompts(type) {
+    const container = document.getElementById('quickPrompts');
+    const prompts = QUICK_PROMPTS[type] || [];
+    container.innerHTML = prompts.map(p =>
+      `<button onclick="setPrompt('${p.text.replace(/'/g, "\\'")}')" style="font-size:12px; padding:5px 12px; border-radius:99px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:var(--gray-400); cursor:pointer; font-family:'Satoshi',sans-serif; transition:all 0.15s;" onmouseover="this.style.borderColor='rgba(155,48,255,0.4)';this.style.color='#c984ff'" onmouseout="this.style.borderColor='rgba(255,255,255,0.1)';this.style.color='var(--gray-400)'">${p.label}</button>`
+    ).join('');
+  }
+
+  function setPrompt(text) {
+    const ta = document.getElementById('promptInput');
+    if (ta.value.trim()) {
+      ta.value = ta.value.trimEnd() + '. ' + text;
+    } else {
+      ta.value = text;
+    }
+    ta.focus();
+  }
+
+  // Initialize with video selected
+  selectContentType('video');
+
+  function addHint(text) {
+    const ta = document.getElementById('promptInput');
+    ta.value = ta.value ? ta.value + '\n' + text : text;
+    ta.focus();
+  }
+
+  // ── MUSIC UPLOAD & AUDIO EDITOR ──
+  let waveTotalDuration = 0;
+  let waveStartPct = 0;
+  let waveEndPct = 1;
+  let waveDragging = null;
+  let waveDragStartX = 0;
+  let waveDragStartPct = 0;
+  let musicTrimStart = null;
+  let musicTrimEnd = null;
+  let currentMusicFile = null;
+
+  document.getElementById('musicInput').addEventListener('change', e => {
+    if (e.target.files[0]) handleMusicFile(e.target.files[0]);
+  });
+
+  async function handleMusicFile(file) {
+    currentMusicFile = file;
+    document.getElementById('musicUploadZone').style.display = 'none';
+    document.getElementById('audioEditor').style.display = 'block';
+    document.getElementById('musicFileName').textContent = file.name;
+    document.getElementById('musicUploadStatus').textContent = 'Uploading...';
+
+    // Get duration
+    const audio = new Audio(URL.createObjectURL(file));
+    audio.addEventListener('loadedmetadata', () => {
+      waveTotalDuration = audio.duration;
+      waveStartPct = 0; waveEndPct = 1;
+      updateWaveHandles();
+      drawWaveform();
+    });
+
+    musicUploadId = crypto.randomUUID();
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_id', musicUploadId);
+
+    try {
+      const { data: { session } } = await sbClient.auth.getSession();
+      if (session) authToken = session.access_token;
+      const res = await fetch(API + '/upload/music', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + authToken },
+        body: formData,
+      });
+      if (res.ok) {
+        musicUploaded = true;
+        document.getElementById('musicUploadStatus').textContent = '✓ Ready — drag handles to trim';
+        document.getElementById('musicUploadStatus').style.color = '#22c55e';
+      } else { throw new Error('Upload failed'); }
+    } catch(e) {
+      document.getElementById('musicUploadStatus').textContent = 'Upload failed. Try again.';
+      document.getElementById('musicUploadStatus').style.color = '#ef4444';
+      musicUploaded = false;
+    }
+  }
+
+  function drawWaveform() {
+    const canvas = document.getElementById('waveCanvas');
+    if (!canvas) return;
+    const w = canvas.offsetWidth || 400;
+    const h = canvas.offsetHeight || 56;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, w, h);
+    const bars = 60;
+    for (let i = 0; i < bars; i++) {
+      const amp = 0.15 + 0.7 * Math.abs(Math.sin(i * 0.45) * Math.cos(i * 0.2));
+      const barH = amp * h * 0.85;
+      ctx.fillStyle = 'rgba(155,48,255,0.5)';
+      ctx.fillRect((i / bars) * w, (h - barH) / 2, Math.max(2, w / bars - 2), barH);
+    }
+  }
+
+  function fmtSecs(s) {
+    if (!s && s !== 0) return 'full';
+    s = Math.round(s);
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function updateWaveHandles() {
+    const container = document.getElementById('waveformContainer');
+    if (!container) return;
+    const w = container.offsetWidth;
+    document.getElementById('waveSelection').style.left = (waveStartPct * 100) + '%';
+    document.getElementById('waveSelection').style.width = ((waveEndPct - waveStartPct) * 100) + '%';
+    document.getElementById('waveHandleStart').style.left = (waveStartPct * w - 6) + 'px';
+    document.getElementById('waveHandleEnd').style.left = (waveEndPct * w - 6) + 'px';
+    const s = waveStartPct * waveTotalDuration;
+    const e = waveEndPct * waveTotalDuration;
+    document.getElementById('waveStartTime').textContent = fmtSecs(s);
+    document.getElementById('waveEndTime').textContent = fmtSecs(e);
+    document.getElementById('waveDurTime').textContent = fmtSecs(e - s);
+  }
+
+  function startWaveDrag(which, e) {
+    waveDragging = which;
+    waveDragStartX = e.clientX;
+    waveDragStartPct = which === 'start' ? waveStartPct : waveEndPct;
+    e.preventDefault();
+  }
+
+  document.addEventListener('mousemove', e => {
+    if (!waveDragging) return;
+    const container = document.getElementById('waveformContainer');
+    if (!container) return;
+    const w = container.offsetWidth;
+    const delta = (e.clientX - waveDragStartX) / w;
+    if (waveDragging === 'start') {
+      waveStartPct = Math.max(0, Math.min(waveEndPct - 0.02, waveDragStartPct + delta));
+    } else {
+      waveEndPct = Math.min(1, Math.max(waveStartPct + 0.02, waveDragStartPct + delta));
+    }
+    updateWaveHandles();
+  });
+
+  document.addEventListener('mouseup', () => { waveDragging = null; });
+
+  function waveClick(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / e.currentTarget.offsetWidth;
+    if (Math.abs(pct - waveStartPct) < 0.03 || Math.abs(pct - waveEndPct) < 0.03) return;
+  }
+
+  function waveReset() {
+    waveStartPct = 0; waveEndPct = 1;
+    musicTrimStart = null; musicTrimEnd = null;
+    updateWaveHandles();
+  }
+
+  function waveConfirm() {
+    musicTrimStart = waveStartPct * waveTotalDuration;
+    musicTrimEnd = waveEndPct * waveTotalDuration;
+    document.getElementById('musicUploadStatus').textContent =
+      '✓ Using ' + fmtSecs(musicTrimStart) + ' – ' + fmtSecs(musicTrimEnd);
+  }
+
+  function removeMusicFile() {
+    musicUploadId = null; musicUploaded = false; currentMusicFile = null;
+    musicTrimStart = null; musicTrimEnd = null;
+    waveStartPct = 0; waveEndPct = 1;
+    document.getElementById('musicInput').value = '';
+    document.getElementById('audioEditor').style.display = 'none';
+    document.getElementById('musicUploadZone').style.display = '';
+  }
+
+  function formatBytes(b) {
+    if (b < 1048576) return (b/1024).toFixed(1)+' KB';
+    if (b < 1073741824) return (b/1048576).toFixed(1)+' MB';
+    return (b/1073741824).toFixed(2)+' GB';
+  }
+
+  // Close modals on overlay click
+  document.getElementById('authModal').addEventListener('click', e => { if (e.target === document.getElementById('authModal')) closeAuth(); });
+  document.getElementById('trialExpiredModal').addEventListener('click', e => { if (e.target === document.getElementById('trialExpiredModal')) document.getElementById('trialExpiredModal').style.display='none'; });
+
+  // Auto-login on page load
+  window.addEventListener('DOMContentLoaded', async () => {
+    const sessionValid = await loadSession();
+    if (sessionValid && authToken) {
+      try {
+        currentProfile = await fetchProfile();
+        if (isTrialExpired(currentProfile)) {
+          updateNav();
+          showTrialExpired(currentProfile);
+        } else {
+          updateNav();
+        }
+      } catch(e) {
+        console.error('Auto-login error:', e);
+      }
+    }
+  });
+</script>
+
+<!-- FEEDBACK WIDGET -->
+<div id="feedbackWidget" style="display:none; position:fixed; bottom:24px; right:24px; z-index:500; animation:slideUp 0.4s ease;">
+  <div style="background:#0e0e1a; border:1px solid rgba(155,48,255,0.25); border-radius:16px; padding:20px 22px; width:240px; box-shadow:0 8px 40px rgba(0,0,0,0.5), 0 0 40px rgba(155,48,255,0.1);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <span style="font-size:13px; font-weight:600; color:#c984ff; font-family:'Cabinet Grotesk',sans-serif;">Help us improve</span>
+      <button onclick="closeFeedback()" style="background:none; border:none; color:var(--gray-600); cursor:pointer; padding:2px; line-height:1;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="font-size:13px; color:var(--gray-400); margin:0 0 16px; line-height:1.5;">How was the result?</p>
+    <div style="display:flex; gap:10px;">
+      <button onclick="submitFeedback('good')" style="flex:1; padding:10px; border-radius:10px; border:1px solid rgba(34,197,94,0.2); background:rgba(34,197,94,0.06); color:#22c55e; font-size:20px; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='rgba(34,197,94,0.12)'" onmouseout="this.style.background='rgba(34,197,94,0.06)'">👍</button>
+      <button onclick="submitFeedback('bad')" style="flex:1; padding:10px; border-radius:10px; border:1px solid rgba(239,68,68,0.2); background:rgba(239,68,68,0.06); color:#ef4444; font-size:20px; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.12)'" onmouseout="this.style.background='rgba(239,68,68,0.06)'">👎</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentJobId = null;
+
+  let feedbackShown = false;
+
+  function showFeedbackWidget(jobId) {
+    if (feedbackShown) return;
+    currentJobId = jobId;
+    feedbackShown = true;
+    setTimeout(() => {
+      const w = document.getElementById('feedbackWidget');
+      w.style.display = 'block';
+      w.style.animation = 'slideUpWidget 0.4s ease';
+    }, 1500);
+  }
+
+  function closeFeedback() {
+    document.getElementById('feedbackWidget').style.display = 'none';
+    feedbackShown = false;
+  }
+
+  async function submitFeedback(rating) {
+    document.getElementById('feedbackWidget').style.display = 'none';
+    feedbackShown = false;
+    if (!currentJobId || !authToken) return;
+    try {
+      await fetch(API + '/jobs/' + currentJobId + '/feedback', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating }),
+      });
+    } catch(e) { console.error('Feedback error:', e); }
+  }
+</script>
+</body>
+</html>
