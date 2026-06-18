@@ -192,14 +192,15 @@ async def process_free(request: Request, body: dict):
             description = result.get("description", "")
             print(f"[JOB {job_id}] Free mode command: {' '.join(ffmpeg_args[:8])}...")
 
-            # Safety check — only allow ffmpeg, block dangerous patterns
+            # Safety check — block shell injection, allow FFmpeg filter syntax
             if not ffmpeg_args or ffmpeg_args[0] != "ffmpeg":
                 raise Exception("Invalid command — must start with ffmpeg")
-            dangerous = [";", "&&", "||", "|", "`", "$(", "rm ", "mv ", "cp ", "/etc", "/bin", "/usr/bin"]
-            cmd_str = " ".join(ffmpeg_args)
-            for d in dangerous:
-                if d in cmd_str:
-                    raise Exception(f"Unsafe command pattern: {d}")
+            # Check each argument individually for shell injection
+            shell_dangerous = [";", "&&", "||", "`", "$(", "rm ", "mv ", "cp ", "/etc/", "/bin/sh", "/bin/bash"]
+            for arg in ffmpeg_args:
+                for d in shell_dangerous:
+                    if d in arg:
+                        raise Exception(f"Unsafe command pattern: {d}")
 
             # Replace input.mp4 and output.mp4 with actual paths
             output_path = f"{output_dir}/output.mp4"
