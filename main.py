@@ -176,11 +176,18 @@ async def process_free(request: Request, body: dict):
                 messages=[{"role": "user", "content": ai_prompt}]
             )
             ai_text = ai_response.content[0].text.strip()
+            print(f"[JOB {job_id}] Free mode Claude response: {ai_text[:300]}")
+            if not ai_text:
+                raise Exception("Claude returned empty response")
             if "```" in ai_text:
                 ai_text = ai_text.split("```")[1]
                 if ai_text.startswith("json"):
                     ai_text = ai_text[4:]
-            result = json.loads(ai_text.strip())
+            ai_text = ai_text.strip()
+            try:
+                result = json.loads(ai_text)
+            except json.JSONDecodeError as e:
+                raise Exception(f"Claude returned invalid JSON: {e} | text: {ai_text[:200]}")
             ffmpeg_args = result.get("ffmpeg_args", [])
             description = result.get("description", "")
             print(f"[JOB {job_id}] Free mode command: {' '.join(ffmpeg_args[:8])}...")
