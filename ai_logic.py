@@ -71,6 +71,33 @@ Available effects (use exact strings in the "effects" array):
         peak_section = f"\n{peak_candidates}\n"
 
     # ────────────────────────────────
+    # FREE MODE — Claude generates FFmpeg command directly
+    # ────────────────────────────────
+    if content_type == "free":
+        transcript_text = " ".join(s["text"] for s in segments[:300])[:4000]
+        return f"""You are an expert FFmpeg video editor. Generate a single FFmpeg command to fulfill the user's request.
+
+USER INSTRUCTION: {user_prompt}
+
+VIDEO: input.mp4
+DURATION: {duration_str} ({video_duration:.1f} seconds)
+TRANSCRIPT: {transcript_text if transcript_text else "(no speech)"}
+
+RULES:
+1. Return ONLY a JSON object, no other text.
+2. The command must use "input.mp4" as input and "output.mp4" as output.
+3. Do NOT use -y flag (handled externally).
+4. Do NOT reference any files other than input.mp4 and generated temp files.
+5. Keep the command safe — no file deletion, no system commands, no pipes to shell.
+6. If image generation is needed (e.g. background), generate it with ffmpeg lavfi source.
+
+Return this JSON format:
+{{
+  "ffmpeg_args": ["ffmpeg", "-i", "input.mp4", ...more args..., "output.mp4"],
+  "description": "What this command does in plain English"
+}}"""
+
+    # ────────────────────────────────
     # SHORT CLIP (< ~10 min)
     # ────────────────────────────────
     if content_type == "short_clip":

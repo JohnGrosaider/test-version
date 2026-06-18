@@ -1245,10 +1245,15 @@
     <!-- SUBMIT -->
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <span id="submitNote" style="font-size:12px; color:var(--gray-600);">Upload a video first</span>
-      <button id="submitBtn" onclick="startProcessing()" disabled style="display:flex; align-items:center; gap:8px; padding:12px 28px; border-radius:10px; border:none; background:linear-gradient(135deg,#7b2fe0,#c040ff); color:#fff; font-size:14px; font-weight:700; font-family:'Cabinet Grotesk',sans-serif; cursor:pointer; opacity:0.4; box-shadow:0 0 24px rgba(155,48,255,0.3); transition:all 0.2s;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Start editing
-      </button>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button id="freeModeBtn" onclick="startProcessingFree()" disabled style="display:flex; align-items:center; gap:8px; padding:12px 20px; border-radius:10px; border:1px solid rgba(155,48,255,0.4); background:transparent; color:#c984ff; font-size:13px; font-weight:600; font-family:'Cabinet Grotesk',sans-serif; cursor:pointer; opacity:0.4; transition:all 0.2s;" title="Free mode — Claude generates FFmpeg commands dynamically">
+          ⚡ Free mode
+        </button>
+        <button id="submitBtn" onclick="startProcessing()" disabled style="display:flex; align-items:center; gap:8px; padding:12px 28px; border-radius:10px; border:none; background:linear-gradient(135deg,#7b2fe0,#c040ff); color:#fff; font-size:14px; font-weight:700; font-family:'Cabinet Grotesk',sans-serif; cursor:pointer; opacity:0.4; box-shadow:0 0 24px rgba(155,48,255,0.3); transition:all 0.2s;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Start editing
+        </button>
+      </div>
     </div>
 
     <!-- PROCESSING -->
@@ -1933,6 +1938,7 @@
       const btn = document.getElementById('submitBtn');
       btn.disabled = false; btn.style.opacity = '1';
       document.getElementById('submitNote').textContent = 'Ready to process';
+      const fmb = document.getElementById('freeModeBtn'); if(fmb){fmb.disabled=false;fmb.style.opacity='1';}
     } catch(err) {
       console.error('Upload error:', err);
       text.textContent = 'Upload failed — check your connection and try again.';
@@ -1943,6 +1949,35 @@
   }
 
   // ── PROCESSING ──
+  async function startProcessingFree() {
+    const prompt = document.getElementById('promptInput').value.trim();
+    if (!prompt) { document.getElementById('promptInput').focus(); return; }
+    if (!uploadId || !authToken) return;
+
+    document.getElementById('processingCard').style.display = 'block';
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('freeModeBtn').disabled = true;
+
+    const { data: { session: s } } = await sbClient.auth.getSession();
+    if (s) authToken = s.access_token;
+
+    try {
+      const res = await fetch(API + '/process-free', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ upload_id: uploadId, prompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert('Error: ' + (data.detail || 'Unknown error')); return; }
+      resumePolling(data.job_id);
+    } catch(e) {
+      alert('Something went wrong: ' + e.message);
+      document.getElementById('processingCard').style.display = 'none';
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('freeModeBtn').disabled = false;
+    }
+  }
+
   async function startProcessing() {
     const prompt = document.getElementById('promptInput').value.trim();
     if (!prompt) { document.getElementById('promptInput').focus(); return; }

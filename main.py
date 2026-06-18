@@ -111,6 +111,128 @@ async def test_gql():
         return {"error": str(e)}
 
 
+@app.post("/process-free")
+async def process_free(request: Request, body: dict):
+    """
+    Free mode — Claude generates FFmpeg command directly from prompt.
+    No predefined effects, Claude figures out the command itself.
+    """
+    user = get_user_from_token(request)
+    upload_id = body.get("upload_id")
+    prompt = body.get("prompt", "")
+    if not upload_id or not prompt:
+        raise HTTPException(status_code=400, detail="Missing upload_id or prompt")
+
+    upload_dir = f"/tmp/uploads/{upload_id}"
+    video_files = [f for f in os.listdir(upload_dir) if not f.startswith("chunk_") and not f.startswith("music")]
+    if not video_files:
+        raise HTTPException(status_code=404, detail="Video not found")
+    video_path = f"{upload_dir}/{video_files[0]}"
+
+    job_id = str(uuid.uuid4())
+    supabase.table("jobs").insert({
+        "id": job_id, "user_id": user.id, "status": "processing",
+        "prompt": prompt, "upload_id": upload_id,
+    }).execute()
+
+    async def run_free_job():
+        output_dir = f"/tmp/outputs/{job_id}"
+        os.makedirs(output_dir, exist_ok=True)
+        try:
+            update_job(job_id, "analyzing")
+
+            # Get video duration
+            probe = subprocess.run([
+                "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1", video_path
+            ], capture_output=True, text=True, timeout=30)
+            video_duration = float(probe.stdout.strip()) if probe.returncode == 0 else 60.0
+
+            # Get transcript for context
+            segments = []
+            try:
+                audio_path = f"{output_dir}/audio.wav"
+                subprocess.run([
+                    "ffmpeg", "-ss", "0", "-i", video_path, "-to", "300",
+                    "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", audio_path, "-y"
+                ], capture_output=True, timeout=60)
+                if os.path.exists(audio_path) and os.path.getsize(audio_path) > 10000:
+                    segments = await transcribe_with_deepgram(audio_path, job_id)
+            except:
+                pass
+
+            # Ask Claude to generate FFmpeg command
+            from ai_logic import build_ai_prompt
+            ai_prompt = build_ai_prompt(
+                content_type="free",
+                user_prompt=prompt,
+                stream_context="",
+                video_duration=video_duration,
+                segments=segments,
+            )
+            ai_response = anthropic_client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=2000,
+                messages=[{"role": "user", "content": ai_prompt}]
+            )
+            ai_text = ai_response.content[0].text.strip()
+            if "```" in ai_text:
+                ai_text = ai_text.split("```")[1]
+                if ai_text.startswith("json"):
+                    ai_text = ai_text[4:]
+            result = json.loads(ai_text.strip())
+            ffmpeg_args = result.get("ffmpeg_args", [])
+            description = result.get("description", "")
+            print(f"[JOB {job_id}] Free mode command: {' '.join(ffmpeg_args[:8])}...")
+
+            # Safety check — only allow ffmpeg, block dangerous patterns
+            if not ffmpeg_args or ffmpeg_args[0] != "ffmpeg":
+                raise Exception("Invalid command — must start with ffmpeg")
+            dangerous = [";", "&&", "||", "|", "`", "$(", "rm ", "mv ", "cp ", "/etc", "/bin", "/usr/bin"]
+            cmd_str = " ".join(ffmpeg_args)
+            for d in dangerous:
+                if d in cmd_str:
+                    raise Exception(f"Unsafe command pattern: {d}")
+
+            # Replace input.mp4 and output.mp4 with actual paths
+            output_path = f"{output_dir}/output.mp4"
+            final_args = []
+            for arg in ffmpeg_args:
+                if arg == "input.mp4":
+                    final_args.append(video_path)
+                elif arg == "output.mp4":
+                    final_args.append(output_path)
+                else:
+                    final_args.append(arg)
+            final_args.extend(["-y"])
+
+            update_job(job_id, "editing")
+            print(f"[JOB {job_id}] Running: {' '.join(final_args[:10])}...")
+            proc = subprocess.run(final_args, capture_output=True, text=True, timeout=1800)
+            if proc.returncode != 0:
+                raise Exception(f"FFmpeg error: {proc.stderr[-500:]}")
+
+            update_job(job_id, "uploading")
+            base_url = "growth-partner-edit-tool-production.up.railway.app"
+            fname = "output.mp4"
+            size_mb = os.path.getsize(output_path) / (1024 * 1024) if os.path.exists(output_path) else 0
+            download_urls = [{"filename": fname, "url": f"https://{base_url}/download/{job_id}/{fname}", "size_mb": round(size_mb, 1), "duration": 0}]
+            supabase.table("jobs").update({
+                "status": "done",
+                "result": json.dumps(download_urls),
+                "description": description,
+            }).eq("id", job_id).execute()
+            print(f"[JOB {job_id}] Free mode done: {description}")
+
+        except Exception as e:
+            import traceback
+            print(f"[JOB {job_id}] Free mode ERROR: {e}\n{traceback.format_exc()}")
+            supabase.table("jobs").update({"status": "error", "error": str(e)[:300]}).eq("id", job_id).execute()
+
+    asyncio.create_task(run_free_job())
+    return {"job_id": job_id}
+
+
 @app.get("/auth/twitch")
 async def twitch_oauth_start(request: Request, token: str = None, force: str = None):
     """Redirect user to Twitch OAuth page."""
