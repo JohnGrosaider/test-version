@@ -176,18 +176,11 @@ async def process_free(request: Request, body: dict):
                 messages=[{"role": "user", "content": ai_prompt}]
             )
             ai_text = ai_response.content[0].text.strip()
-            print(f"[JOB {job_id}] Free mode Claude response: {ai_text[:300]}")
-            if not ai_text:
-                raise Exception("Claude returned empty response")
             if "```" in ai_text:
                 ai_text = ai_text.split("```")[1]
                 if ai_text.startswith("json"):
                     ai_text = ai_text[4:]
-            ai_text = ai_text.strip()
-            try:
-                result = json.loads(ai_text)
-            except json.JSONDecodeError as e:
-                raise Exception(f"Claude returned invalid JSON: {e} | text: {ai_text[:200]}")
+            result = json.loads(ai_text.strip())
             ffmpeg_args = result.get("ffmpeg_args", [])
             description = result.get("description", "")
             print(f"[JOB {job_id}] Free mode command: {' '.join(ffmpeg_args[:8])}...")
@@ -195,12 +188,17 @@ async def process_free(request: Request, body: dict):
             # Safety check — block shell injection, allow FFmpeg filter syntax
             if not ffmpeg_args or ffmpeg_args[0] != "ffmpeg":
                 raise Exception("Invalid command — must start with ffmpeg")
-            # Check each argument individually for shell injection
-            shell_dangerous = [";", "&&", "||", "`", "$(", "rm ", "mv ", "cp ", "/etc/", "/bin/sh", "/bin/bash"]
+            always_dangerous = ["&&", "||", "`", "$(", "rm ", "mv ", "cp ", "/etc/", "/bin/sh", "/bin/bash"]
+            filter_flags = {"-filter_complex", "-vf", "-af", "-filter:v", "-filter:a"}
+            prev_arg = ""
             for arg in ffmpeg_args:
-                for d in shell_dangerous:
+                in_filter = prev_arg in filter_flags
+                for d in always_dangerous:
                     if d in arg:
                         raise Exception(f"Unsafe command pattern: {d}")
+                if ";" in arg and not in_filter:
+                    raise Exception(f"Unsafe command pattern: ;")
+                prev_arg = arg
 
             # Replace input.mp4 and output.mp4 with actual paths
             output_path = f"{output_dir}/output.mp4"
