@@ -183,7 +183,7 @@ async def process_free(request: Request, body: dict):
             result = json.loads(ai_text.strip())
             ffmpeg_args = result.get("ffmpeg_args", [])
             description = result.get("description", "")
-            print(f"[JOB {job_id}] Free mode command: {' '.join(ffmpeg_args[:8])}...")
+            print(f"[JOB {job_id}] Free mode FULL command: {ffmpeg_args}")
 
             # Safety check — block shell injection, allow FFmpeg filter syntax
             if not ffmpeg_args or ffmpeg_args[0] != "ffmpeg":
@@ -213,9 +213,10 @@ async def process_free(request: Request, body: dict):
             final_args.extend(["-y"])
 
             update_job(job_id, "editing")
-            print(f"[JOB {job_id}] Running: {' '.join(final_args[:10])}...")
+            print(f"[JOB {job_id}] Running FULL: {final_args}")
             proc = subprocess.run(final_args, capture_output=True, text=True, timeout=1800)
             if proc.returncode != 0:
+                print(f"[JOB {job_id}] FFmpeg FULL stderr: {proc.stderr}")
                 raise Exception(f"FFmpeg error: {proc.stderr[-500:]}")
 
             update_job(job_id, "uploading")
