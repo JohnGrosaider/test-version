@@ -161,7 +161,7 @@ async def process_free(request: Request, body: dict):
             except:
                 pass
 
-            # Ask Claude to generate FFmpeg command
+            # Ask Claude to generate FFmpeg command — with retry on failure
             from ai_logic import build_ai_prompt
             ai_prompt = build_ai_prompt(
                 content_type="free",
@@ -170,54 +170,97 @@ async def process_free(request: Request, body: dict):
                 video_duration=video_duration,
                 segments=segments,
             )
-            ai_response = anthropic_client.messages.create(
-                model="claude-sonnet-4-6",
-                max_tokens=2000,
-                messages=[{"role": "user", "content": ai_prompt}]
-            )
-            ai_text = ai_response.content[0].text.strip()
-            if "```" in ai_text:
-                ai_text = ai_text.split("```")[1]
-                if ai_text.startswith("json"):
-                    ai_text = ai_text[4:]
-            result = json.loads(ai_text.strip())
-            ffmpeg_args = result.get("ffmpeg_args", [])
-            description = result.get("description", "")
-            print(f"[JOB {job_id}] Free mode FULL command: {ffmpeg_args}")
 
-            # Safety check — block shell injection, allow FFmpeg filter syntax
-            if not ffmpeg_args or ffmpeg_args[0] != "ffmpeg":
-                raise Exception("Invalid command — must start with ffmpeg")
-            always_dangerous = ["&&", "||", "`", "$(", "rm ", "mv ", "cp ", "/etc/", "/bin/sh", "/bin/bash"]
-            filter_flags = {"-filter_complex", "-vf", "-af", "-filter:v", "-filter:a"}
-            prev_arg = ""
-            for arg in ffmpeg_args:
-                in_filter = prev_arg in filter_flags
-                for d in always_dangerous:
-                    if d in arg:
-                        raise Exception(f"Unsafe command pattern: {d}")
-                if ";" in arg and not in_filter:
-                    raise Exception(f"Unsafe command pattern: ;")
-                prev_arg = arg
-
-            # Replace input.mp4 and output.mp4 with actual paths
             output_path = f"{output_dir}/output.mp4"
-            final_args = []
-            for arg in ffmpeg_args:
-                if arg == "input.mp4":
-                    final_args.append(video_path)
-                elif arg == "output.mp4":
-                    final_args.append(output_path)
-                else:
-                    final_args.append(arg)
-            final_args.extend(["-y"])
+            max_attempts = 3
+            last_error = None
+            description = ""
 
-            update_job(job_id, "editing")
-            print(f"[JOB {job_id}] Running FULL: {final_args}")
-            proc = subprocess.run(final_args, capture_output=True, text=True, timeout=1800)
-            if proc.returncode != 0:
-                print(f"[JOB {job_id}] FFmpeg FULL stderr: {proc.stderr}")
-                raise Exception(f"FFmpeg error: {proc.stderr[-500:]}")
+            for attempt in range(1, max_attempts + 1):
+                if attempt == 1:
+                    current_prompt = ai_prompt
+                else:
+                    current_prompt = (
+                        f"{ai_prompt}\n\n"
+                        f"PREVIOUS ATTEMPT FAILED. Fix the command.\n"
+                        f"Previous command: {ffmpeg_args}\n"
+                        f"FFmpeg error: {last_error}\n"
+                        f"Generate a corrected command that fixes this specific error. "
+                        f"Check parameter ranges and filter syntax carefully."
+                    )
+
+                print(f"[JOB {job_id}] Attempt {attempt}/{max_attempts}...")
+                ai_response = anthropic_client.messages.create(
+                    model="claude-sonnet-4-6",
+                    max_tokens=2000,
+                    messages=[{"role": "user", "content": current_prompt}]
+                )
+                ai_text = ai_response.content[0].text.strip()
+                if not ai_text:
+                    last_error = "Claude returned empty response"
+                    continue
+                if "```" in ai_text:
+                    ai_text = ai_text.split("```")[1]
+                    if ai_text.startswith("json"):
+                        ai_text = ai_text[4:]
+                ai_text = ai_text.strip()
+
+                try:
+                    result = json.loads(ai_text)
+                except json.JSONDecodeError as e:
+                    last_error = f"Invalid JSON: {e}"
+                    print(f"[JOB {job_id}] Attempt {attempt} JSON error: {last_error}")
+                    continue
+
+                ffmpeg_args = result.get("ffmpeg_args", [])
+                description = result.get("description", "")
+                print(f"[JOB {job_id}] Attempt {attempt} command: {ffmpeg_args}")
+
+                # Safety check
+                try:
+                    if not ffmpeg_args or ffmpeg_args[0] != "ffmpeg":
+                        raise Exception("Invalid command — must start with ffmpeg")
+                    always_dangerous = ["&&", "||", "`", "$(", "rm ", "mv ", "cp ", "/etc/", "/bin/sh", "/bin/bash"]
+                    filter_flags = {"-filter_complex", "-vf", "-af", "-filter:v", "-filter:a"}
+                    prev_arg = ""
+                    for arg in ffmpeg_args:
+                        in_filter = prev_arg in filter_flags
+                        for d in always_dangerous:
+                            if d in arg:
+                                raise Exception(f"Unsafe command pattern: {d}")
+                        if ";" in arg and not in_filter:
+                            raise Exception("Unsafe command pattern: ;")
+                        prev_arg = arg
+                except Exception as safety_err:
+                    last_error = str(safety_err)
+                    print(f"[JOB {job_id}] Attempt {attempt} safety error: {last_error}")
+                    continue
+
+                # Replace input.mp4 and output.mp4 with actual paths
+                final_args = []
+                for arg in ffmpeg_args:
+                    if arg == "input.mp4":
+                        final_args.append(video_path)
+                    elif arg == "output.mp4":
+                        final_args.append(output_path)
+                    else:
+                        final_args.append(arg)
+                final_args.extend(["-y"])
+
+                update_job(job_id, "editing")
+                print(f"[JOB {job_id}] Attempt {attempt} running FFmpeg...")
+                proc = subprocess.run(final_args, capture_output=True, text=True, timeout=1800)
+
+                if proc.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
+                    print(f"[JOB {job_id}] Attempt {attempt} SUCCESS")
+                    last_error = None
+                    break
+                else:
+                    last_error = proc.stderr[-800:] if proc.stderr else "FFmpeg produced no output"
+                    print(f"[JOB {job_id}] Attempt {attempt} FAILED: {last_error[:300]}")
+
+            if last_error:
+                raise Exception(f"All {max_attempts} attempts failed. Last error: {last_error[:300]}")
 
             update_job(job_id, "uploading")
             base_url = "growth-partner-edit-tool-production.up.railway.app"
