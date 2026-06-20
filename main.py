@@ -532,18 +532,41 @@ async def upload_chunk(
 
     if await loop.run_in_executor(None, all_chunks_present):
         assembled_path = f"{upload_dir}/video{os.path.splitext(file.filename)[1]}"
+        lock_path = f"{upload_dir}/.assembling"
+
+        def try_acquire_lock():
+            # Atomic lock acquisition — only one request wins
+            try:
+                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.close(fd)
+                return True
+            except FileExistsError:
+                return False
+
         if not os.path.exists(assembled_path):
-            def assemble():
-                with open(assembled_path + ".tmp", "wb") as out:
-                    for i in range(total_chunks):
-                        chunk_file = f"{upload_dir}/chunk_{i:04d}"
-                        with open(chunk_file, "rb") as cf:
-                            out.write(cf.read())
-                os.replace(assembled_path + ".tmp", assembled_path)
-                for i in range(total_chunks):
-                    try: os.remove(f"{upload_dir}/chunk_{i:04d}")
-                    except: pass
-            await loop.run_in_executor(None, assemble)
+            got_lock = await loop.run_in_executor(None, try_acquire_lock)
+            if got_lock:
+                def assemble():
+                    try:
+                        with open(assembled_path + ".tmp", "wb") as out:
+                            for i in range(total_chunks):
+                                chunk_file = f"{upload_dir}/chunk_{i:04d}"
+                                with open(chunk_file, "rb") as cf:
+                                    out.write(cf.read())
+                        os.replace(assembled_path + ".tmp", assembled_path)
+                        for i in range(total_chunks):
+                            try: os.remove(f"{upload_dir}/chunk_{i:04d}")
+                            except: pass
+                    finally:
+                        try: os.remove(lock_path)
+                        except: pass
+                await loop.run_in_executor(None, assemble)
+            else:
+                # Another request is assembling — wait for it to finish
+                for _ in range(60):  # up to 30s
+                    await asyncio.sleep(0.5)
+                    if os.path.exists(assembled_path):
+                        break
         return {"status": "assembled", "upload_id": upload_id, "path": assembled_path, "filename": file.filename}
 
     return {"status": "chunk_saved", "chunk_index": chunk_index}
