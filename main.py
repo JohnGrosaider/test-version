@@ -173,6 +173,7 @@ async def process_free(request: Request, body: dict):
 
             output_path = f"{output_dir}/output.mp4"
             max_attempts = 3
+            ffmpeg_args = []
             last_error = None
             description = ""
 
